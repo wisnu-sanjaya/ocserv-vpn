@@ -39,15 +39,16 @@
 #include "ipc.pb-c.h"
 #include <tlslib.h>
 
-
-static int recv_resume_fetch_reply(worker_st *ws, int sd, gnutls_datum_t *sdata)
+static int recv_resume_fetch_reply(worker_st * ws, int sd,
+				   gnutls_datum_t * sdata)
 {
 	int ret;
 	SessionResumeReplyMsg *resp;
 	PROTOBUF_ALLOCATOR(pa, ws);
 
-	ret = recv_msg(ws, sd, RESUME_FETCH_REP, (void*)&resp, 
-		(unpack_func)session_resume_reply_msg__unpack, DEFAULT_SOCKET_TIMEOUT);
+	ret = recv_msg(ws, sd, RESUME_FETCH_REP, (void *)&resp,
+		       (unpack_func) session_resume_reply_msg__unpack,
+		       DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error receiving resumption reply (fetch)");
 		return ret;
@@ -57,7 +58,7 @@ static int recv_resume_fetch_reply(worker_st *ws, int sd, gnutls_datum_t *sdata)
 		ret = -1;
 		goto cleanup;
 	}
-		
+
 	sdata->data = gnutls_malloc(resp->session_data.len);
 	if (sdata->data == NULL) {
 		ret = -1;
@@ -68,9 +69,9 @@ static int recv_resume_fetch_reply(worker_st *ws, int sd, gnutls_datum_t *sdata)
 	memcpy(sdata->data, resp->session_data.data, sdata->size);
 
 	ret = 0;
-cleanup:
+ cleanup:
 	session_resume_reply_msg__free_unpacked(resp, &pa);
-	
+
 	return ret;
 }
 
@@ -86,7 +87,8 @@ static gnutls_datum_t resume_db_fetch(void *dbf, gnutls_datum_t key)
 	SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
 
 	if (key.size > GNUTLS_MAX_SESSION_ID) {
-		oclog(ws, LOG_DEBUG, "session ID size exceeds the maximum %u", key.size);
+		oclog(ws, LOG_DEBUG, "session ID size exceeds the maximum %u",
+		      key.size);
 		return r;
 	}
 
@@ -99,12 +101,13 @@ static gnutls_datum_t resume_db_fetch(void *dbf, gnutls_datum_t key)
 	msg.session_id.len = key.size;
 	msg.session_id.data = key.data;
 	msg.cli_addr.len = ws->remote_addr_len;
-	msg.cli_addr.data = (void*)&ws->remote_addr;
+	msg.cli_addr.data = (void *)&ws->remote_addr;
 	msg.vhost = ws->vhost->name;
 
 	ret = send_msg_to_secmod(ws, sd, RESUME_FETCH_REQ, &msg,
-		(pack_size_func)session_resume_fetch_msg__get_packed_size,
-		(pack_func)session_resume_fetch_msg__pack);
+				 (pack_size_func)
+				 session_resume_fetch_msg__get_packed_size,
+				 (pack_func) session_resume_fetch_msg__pack);
 	if (ret < 0) {
 		goto cleanup;
 	}
@@ -112,25 +115,25 @@ static gnutls_datum_t resume_db_fetch(void *dbf, gnutls_datum_t key)
 	recv_resume_fetch_reply(ws, sd, &r);
 
  cleanup:
- 	close(sd);
+	close(sd);
 	return r;
 }
 
-
-static int
-resume_db_store (void *dbf, gnutls_datum_t key, gnutls_datum_t data)
+static int resume_db_store(void *dbf, gnutls_datum_t key, gnutls_datum_t data)
 {
 	worker_st *ws = dbf;
 	SessionResumeStoreReqMsg msg = SESSION_RESUME_STORE_REQ_MSG__INIT;
 	int ret, sd;
 
 	if (data.size > MAX_SESSION_DATA_SIZE) {
-		oclog(ws, LOG_DEBUG, "session data size exceeds the maximum %u", data.size);
+		oclog(ws, LOG_DEBUG, "session data size exceeds the maximum %u",
+		      data.size);
 		return GNUTLS_E_DB_ERROR;
 	}
 
 	if (key.size > GNUTLS_MAX_SESSION_ID) {
-		oclog(ws, LOG_DEBUG, "session ID size exceeds the maximum %u", key.size);
+		oclog(ws, LOG_DEBUG, "session ID size exceeds the maximum %u",
+		      key.size);
 		return GNUTLS_E_DB_ERROR;
 	}
 
@@ -141,7 +144,7 @@ resume_db_store (void *dbf, gnutls_datum_t key, gnutls_datum_t data)
 	msg.session_data.data = data.data;
 
 	msg.cli_addr.len = ws->remote_addr_len;
-	msg.cli_addr.data = (void*)&ws->remote_addr;
+	msg.cli_addr.data = (void *)&ws->remote_addr;
 
 	msg.vhost = ws->vhost->name;
 
@@ -152,8 +155,10 @@ resume_db_store (void *dbf, gnutls_datum_t key, gnutls_datum_t data)
 	}
 
 	ret = send_msg_to_secmod(ws, sd, RESUME_STORE_REQ, &msg,
-		(pack_size_func)session_resume_store_req_msg__get_packed_size,
-		(pack_func)session_resume_store_req_msg__pack);
+				 (pack_size_func)
+				 session_resume_store_req_msg__get_packed_size,
+				 (pack_func)
+				 session_resume_store_req_msg__pack);
 
 	close(sd);
 
@@ -175,7 +180,8 @@ static int resume_db_delete(void *dbf, gnutls_datum_t key)
 	SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
 
 	if (key.size > GNUTLS_MAX_SESSION_ID) {
-		oclog(ws, LOG_DEBUG, "Session ID size exceeds the maximum %u", key.size);
+		oclog(ws, LOG_DEBUG, "Session ID size exceeds the maximum %u",
+		      key.size);
 		return GNUTLS_E_DB_ERROR;
 	}
 
@@ -189,8 +195,9 @@ static int resume_db_delete(void *dbf, gnutls_datum_t key)
 	}
 
 	ret = send_msg_to_secmod(ws, sd, RESUME_DELETE_REQ, &msg,
-		(pack_size_func)session_resume_fetch_msg__get_packed_size,
-		(pack_func)session_resume_fetch_msg__pack);
+				 (pack_size_func)
+				 session_resume_fetch_msg__get_packed_size,
+				 (pack_func) session_resume_fetch_msg__pack);
 
 	close(sd);
 	if (ret < 0)
@@ -201,7 +208,7 @@ static int resume_db_delete(void *dbf, gnutls_datum_t key)
 
 void set_resume_db_funcs(gnutls_session_t session)
 {
-	gnutls_db_set_retrieve_function (session, resume_db_fetch);
-	gnutls_db_set_remove_function (session, resume_db_delete);
-	gnutls_db_set_store_function (session, resume_db_store);
+	gnutls_db_set_retrieve_function(session, resume_db_fetch);
+	gnutls_db_set_remove_function(session, resume_db_delete);
+	gnutls_db_set_store_function(session, resume_db_store);
 }

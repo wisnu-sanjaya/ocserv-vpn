@@ -33,6 +33,9 @@ occtl:        libreadline-dev    / readline-devel
               libnl-route-3-dev  / libnl3-devel
 GSSAPI:       libkrb5-dev        / krb5-devel
 Radius:       libradcli-dev      / radcli-devel
+SAML2:        liblasso3-dev      / lasso3-devel
+              libglib2.0-dev     / glib2.0-devel
+              libapr1-dev        / apr1-devel
 ```
 
 Dependencies for development, testing, or dependencies that can be skipped
@@ -108,6 +111,7 @@ To run the server on the foreground edit the [sample.config](doc/sample.config) 
 
 Several configuration instruction are available in [the recipes repository](https://github.com/openconnect/recipes).
 
+OIDC and SAML auth instructions are in ./doc
 
 # Profiling
 

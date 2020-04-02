@@ -19,6 +19,7 @@
  */
 
 #include <config.h>
+#include <common-config.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
@@ -46,11 +47,10 @@
 
 #define VERSION_MSG "<version who=\"sg\">0.1(1)</version>\n"
 
-static const char oc_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-			"<config-auth client=\"vpn\" type=\"complete\">\n"
-			VERSION_MSG
-                        "<auth id=\"success\">\n"
-                        "<title>SSL VPN Service</title>";
+static const char oc_success_msg_head[] =
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+    "<config-auth client=\"vpn\" type=\"complete\">\n" VERSION_MSG
+    "<auth id=\"success\">\n" "<title>SSL VPN Service</title>";
 
 #define OC_SUCCESS_MSG_FOOT "</auth></config-auth>\n"
 #define OC_SUCCESS_MSG_FOOT_PROFILE \
@@ -67,9 +67,9 @@ static const char oc_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UTF-
 			"</config>" \
 			"</config-auth>"
 
-static const char ocv3_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                        "<auth id=\"success\">\n"
-                        "<title>SSL VPN Service</title>";
+static const char ocv3_success_msg_head[] =
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" "<auth id=\"success\">\n"
+    "<title>SSL VPN Service</title>";
 
 static const char ocv3_success_msg_foot[] = "</auth>\n";
 
@@ -81,8 +81,7 @@ static const char ocv3_success_msg_foot[] = "</auth>\n";
     "<message>%s</message>\n" \
     "<form method=\"post\" action=\"/auth\">\n"
 
-static const char oc_login_msg_end[] =
-    "</form></auth>\n" "</config-auth>";
+static const char oc_login_msg_end[] = "</form></auth>\n" "</config-auth>";
 
 static const char login_msg_user[] =
     "<input type=\"text\" name=\"username\" label=\"Username:\" />\n";
@@ -106,11 +105,64 @@ static const char login_msg_user[] =
 #define HTTP_AUTH_OIDC_PREFIX "Bearer"
 #endif
 
-static const char ocv3_login_msg_end[] =
-    "</form></auth>\n";
+#ifdef HAVE_SAML
+#define OC_SAML_LOGIN_MSG_START \
+	"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
+	"<config-auth client=\"vpn\" type=\"auth-request\" aggregate-auth-version=\"2\">\n" \
+	"<opaque is-for=\"sg\">\n" \
+	"<auth-method>single-sign-on-v2</auth-method>\n" \
+	"</opaque>\n" \
+	"<auth id=\"main\">\n" \
+	"<title>Login</title>\n" \
+	"<message>Please complete the authentication process in the AnyConnect Login window.</message>\n" \
+	"<banner></banner>\n" \
+	"<sso-v2-login>https://%1$s/+CSCOE+/saml/sp/login</sso-v2-login>\n" \
+	"<sso-v2-login-final>https://%1$s/+CSCOE+/saml_ac_login.html</sso-v2-login-final>\n" \
+	"<sso-v2-logout>https://%1$s/+CSCOE+/saml/sp/logout</sso-v2-logout>\n" \
+	"<sso-v2-logout-final>https://%1$s/+CSCOE+/saml_ac_login.html</sso-v2-logout-final>\n" \
+	"<sso-v2-token-cookie-name>acSamlv2Token</sso-v2-token-cookie-name>\n" \
+	"<sso-v2-error-cookie-name>acSamlv2Error</sso-v2-error-cookie-name>\n" \
+	"<form>\n<input type=\"sso\" name=\"sso-token\"></input>\n"
+
+#define HTTP_AUTH_SAML_REDIRECT_FOOT \
+	"</form>\n</auth>\n</config-auth>\n"
+
+#define ACS_RESPONSE_FORM \
+	"<html>\n<head>\n<script>\nfunction submit_saml() {\n" \
+    "document.cookie = \"webvpncontext=%s; Max-Age=%u; webvpnlogin=1; path=/; secure\";\n" \
+    "document.createElement('form').submit.call(document.getElementById('samlform'));\n" \
+	"}\n</script>\n</head>\n<body onload=\"submit_saml()\">\n" \
+	"<form id=\"samlform\" action=\"/+webvpn+/index.html\" method=\"POST\">\n" \
+	"<input type=\"hidden\" name=\"tgroup\" value=\"\">\n" \
+	"<input type=\"hidden\" name=\"next\" value=\"\">\n" \
+	"<input type=\"hidden\" name=\"tgcookieset\" value=\"\">\n" \
+	"<input type=\"hidden\" name=\"group_list\" value=\"AC-SAML\">\n" \
+	"<input type=\"hidden\" name=\"username\" value=\"\">\n" \
+	"<input type=\"hidden\" name=\"SAMLResponse\" value=\"%s\">\n" \
+	"<input type=\"submit\" name=\"Login\" value=\"Login\" style=\"display:none;\">\n" \
+	"</form>\n</body>\n</html>\n"
+
+static const char saml_assertion_valid[] =
+    "<html>\n<head>\n<script>\n"
+    "document.location.replace(\"/+CSCOE+/logon.html?\"+\n\"a0=0\"+\n\"&a1=\"+\n\"&a2=\"+\n\"&a3=1\");\n"
+    "</script>\n</head>\n</html>";
+
+static char saml_success_page[] =
+    "<html>\n<head>\n<title>Authentication successful</title>\n<link href=\"/+CSCOU+/saml_ac.css\" rel=\"stylesheet\">\n"
+    "</head>\n<body>\n<div class=\"view\">\n<div class=\"title-bar\">\n<img src=\"/+CSCOU+/cisco_saml.png\" class=\"logo\"/>\n "
+    "<div class=\"title-div\">\n<span class=\"title-span\">AnyConnect Secure Mobility Client</span>\n"
+    "</div>\n</div>\n<div class=\"message-div\"></div>\n<div class=\"check-fill\"></div>\n"
+    "<img src=\"/+CSCOU+/check.png\" class=\"check-img\"/>\n<div class=\"log-success\">\n"
+    "<span class=\"log-span\">You have successfully authenticated. You may now close this browser tab.</span>\n"
+    "</div>\n</div>\n</body>\n</html>\n";
+
+#endif
+
+static const char ocv3_login_msg_end[] = "</form></auth>\n";
 
 static int get_cert_info(worker_st * ws);
-static int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg);
+static int basic_auth_handler(worker_st * ws, unsigned http_ver,
+			      const char *msg);
 
 #ifdef SUPPORT_OIDC_AUTH
 static int oidc_auth_handler(worker_st * ws, unsigned http_ver);
@@ -124,8 +176,9 @@ int ws_switch_auth_to(struct worker_st *ws, unsigned auth)
 	    ws->selected_auth->type & auth)
 		return 1;
 
-	for (i=0;i<WSPCONFIG(ws)->auth_methods;i++) {
-		if (WSPCONFIG(ws)->auth[i].enabled && (WSPCONFIG(ws)->auth[i].type & auth) != 0) {
+	for (i = 0; i < WSPCONFIG(ws)->auth_methods; i++) {
+		if (WSPCONFIG(ws)->auth[i].enabled
+		    && (WSPCONFIG(ws)->auth[i].type & auth) != 0) {
 			ws->selected_auth = &WSPCONFIG(ws)->auth[i];
 			return 1;
 		}
@@ -146,7 +199,7 @@ int ws_switch_auth_to_next(struct worker_st *ws)
 
 	ws->selected_auth->enabled = 0;
 
-	for (i=0;i<WSPCONFIG(ws)->auth_methods;i++) {
+	for (i = 0; i < WSPCONFIG(ws)->auth_methods; i++) {
 		if (&WSPCONFIG(ws)->auth[i] != ws->selected_auth &&
 		    WSPCONFIG(ws)->auth[i].enabled != 0) {
 
@@ -157,26 +210,28 @@ int ws_switch_auth_to_next(struct worker_st *ws)
 	return 0;
 }
 
-static int append_group_idx(worker_st * ws, str_st *str, unsigned i)
+static int append_group_idx(worker_st * ws, str_st * str, unsigned i)
 {
 	char temp[128];
 	const char *name;
 	const char *value;
 
 	value = WSCONFIG(ws)->group_list[i];
-	if (WSCONFIG(ws)->friendly_group_list != NULL && WSCONFIG(ws)->friendly_group_list[i] != NULL)
+	if (WSCONFIG(ws)->friendly_group_list != NULL
+	    && WSCONFIG(ws)->friendly_group_list[i] != NULL)
 		name = WSCONFIG(ws)->friendly_group_list[i];
 	else
 		name = WSCONFIG(ws)->group_list[i];
 
-	snprintf(temp, sizeof(temp), "<option value=\"%s\">%s</option>\n", value, name);
+	snprintf(temp, sizeof(temp), "<option value=\"%s\">%s</option>\n",
+		 value, name);
 	if (str_append_str(str, temp) < 0)
 		return -1;
 
 	return 0;
 }
 
-static int append_group_str(worker_st * ws, str_st *str, const char *group)
+static int append_group_str(worker_st * ws, str_st * str, const char *group)
 {
 	char temp[256];
 	const char *name;
@@ -186,23 +241,242 @@ static int append_group_str(worker_st * ws, str_st *str, const char *group)
 	value = name = group;
 
 	if (WSCONFIG(ws)->friendly_group_list) {
-		for (i=0;i<WSCONFIG(ws)->group_list_size;i++) {
+		for (i = 0; i < WSCONFIG(ws)->group_list_size; i++) {
 			if (strcmp(WSCONFIG(ws)->group_list[i], group) == 0) {
-				if (WSCONFIG(ws)->friendly_group_list[i] != NULL)
-					name = WSCONFIG(ws)->friendly_group_list[i];
+				if (WSCONFIG(ws)->friendly_group_list[i] !=
+				    NULL)
+					name =
+					    WSCONFIG(ws)->
+					    friendly_group_list[i];
 				break;
 			}
 		}
 	}
 
-	snprintf(temp, sizeof(temp), "<option value=\"%s\">%s</option>\n", value, name);
+	snprintf(temp, sizeof(temp), "<option value=\"%s\">%s</option>\n",
+		 value, name);
 	if (str_append_str(str, temp) < 0)
 		return -1;
 
 	return 0;
 }
 
-int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsigned pcounter)
+#ifdef HAVE_SAML
+
+int send_saml_request_redirect(worker_st * ws, unsigned http_ver,
+			       const char *pmsg, unsigned pcounter)
+{
+	char context[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
+	int ret;
+
+	oclog(ws, LOG_HTTP_DEBUG,
+	      "HTTP sending: 303 See Other (SAML redirect)");
+	cstp_cork(ws);
+	ret = cstp_printf(ws, "HTTP/1.%u 303 See Other\r\n", http_ver);
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "Content-Type: text/html; charset=utf-8\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "Content-Length: 0\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "Cache-Control: no-store\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "Pragma: no-cache\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
+	if (ret < 0)
+		return -1;
+
+	/* anyconnect is really stupid with stale cookies in the saml browser window. */
+	ret =
+	    cstp_puts(ws,
+		      "Set-Cookie: webvpncontext=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
+	ret =
+	    cstp_puts(ws,
+		      "Set-Cookie: webvpncontext=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
+
+	if (ws->sid_set != 0) {
+		char safe_id[SAFE_ID_SIZE];
+
+		oc_base64_encode((char *)ws->sid, sizeof(ws->sid),
+				 (char *)context, sizeof(context));
+
+		ret =
+		    cstp_printf(ws,
+				"Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
+				context,
+				(unsigned)WSCONFIG(ws)->cookie_timeout);
+		if (ret < 0)
+			return -1;
+
+		oclog(ws, LOG_SENSITIVE, "sent session id: %s",
+		      calc_safe_id(ws->sid, sizeof(ws->sid), safe_id,
+				   sizeof(safe_id)));
+	} else {
+		ret =
+		    cstp_puts(ws,
+			      "Set-Cookie: webvpncontext=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
+		if (ret < 0)
+			return -1;
+	}
+
+	ret = cstp_printf(ws, "Location: %s\r\n", pmsg);
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "Set-Cookie: acsamlcap=v2; path=/; secure\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "Set-Cookie: tg=; path=/; secure\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "Set-Cookie: acSamlv2Error=; path=/; secure\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_uncork(ws);
+	if (ret < 0)
+		return -1;
+
+	return 0;
+}
+
+int post_acs_handler(worker_st * ws, unsigned http_ver)
+{
+	int ret;
+	str_st str;
+	char context[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
+	size_t bodylen = strlen(ws->req.body);
+	char saml_response[10000];
+	char *unescaped_saml_response;
+
+	if (strncmp(ws->req.body, "SAMLResponse", 12) == 0) {
+		memcpy(saml_response, ws->req.body + 13, bodylen - 12);
+	}
+
+	str_init(&str, ws);
+
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 200 OK");
+	cstp_cork(ws);
+	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = cstp_puts(ws, "Content-Type: text/html; charset=utf-8\r\n");
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	if (ws->sid_set != 0) {
+		char safe_id[SAFE_ID_SIZE];
+
+		oc_base64_encode((char *)ws->sid, sizeof(ws->sid),
+				 (char *)context, sizeof(context));
+
+		ret =
+		    cstp_printf(ws,
+				"Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
+				context,
+				(unsigned)WSCONFIG(ws)->cookie_timeout);
+		if (ret < 0)
+			return -1;
+
+		oclog(ws, LOG_SENSITIVE, "sent session id: %s",
+		      calc_safe_id(ws->sid, sizeof(ws->sid), safe_id,
+				   sizeof(safe_id)));
+	} else {
+		ret =
+		    cstp_puts(ws,
+			      "Set-Cookie: webvpncontext=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
+		if (ret < 0)
+			return -1;
+	}
+
+	ret = cstp_puts(ws, "Cache-Control: no-store\r\n");
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = cstp_puts(ws, "Pragma: no-cache\r\n");
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	unescaped_saml_response =
+	    unescape_url(ws->req.body, saml_response, strlen(saml_response),
+			 NULL);
+
+	ret =
+	    str_append_printf(&str, ACS_RESPONSE_FORM, context,
+			      (unsigned)WSCONFIG(ws)->cookie_timeout,
+			      unescaped_saml_response);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret =
+	    cstp_printf(ws, "Content-Length: %u\r\n", (unsigned int)str.length);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = cstp_puts(ws, "\r\n");
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = cstp_send(ws, str.data, str.length);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = cstp_uncork(ws);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = 0;
+
+ cleanup:
+	str_clear(&str);
+	return ret;
+}
+
+#endif
+
+int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg,
+		      unsigned pcounter)
 {
 	int ret;
 	char context[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
@@ -219,16 +493,30 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 		else
 			login_msg_start = OCV3_LOGIN_MSG_START;
 		login_msg_end = ocv3_login_msg_end;
+#ifdef HAVE_SAML
+	} else if (ws->selected_auth->type & AUTH_TYPE_SAML) {
+		login_msg_start = OC_SAML_LOGIN_MSG_START;
+		login_msg_end = oc_login_msg_end;
+#endif
 	} else {
 		login_msg_start = OC_LOGIN_MSG_START;
 		login_msg_end = oc_login_msg_end;
 	}
 
-	if ((ws->selected_auth->type & AUTH_TYPE_GSSAPI) && ws->auth_state < S_AUTH_COOKIE) {
-		if (ws->req.authorization == NULL || ws->req.authorization_size == 0)
+	if ((ws->selected_auth->type & AUTH_TYPE_GSSAPI)
+	    && ws->auth_state < S_AUTH_COOKIE) {
+		if (ws->req.authorization == NULL
+		    || ws->req.authorization_size == 0)
 			return basic_auth_handler(ws, http_ver, NULL);
 		else
 			return post_auth_handler(ws, http_ver);
+	}
+	char *url = "/";
+
+	if ((ws->selected_auth->type & AUTH_TYPE_SAML)
+	    && strncmp(ws->req.url, url, strlen(ws->req.url)) != 0) {
+		ws->sid_set = 0;	// Anyconnect is dumb and very persistent with stale cookies. I need a saml request anyway.
+		return post_auth_handler(ws, http_ver);
 	}
 
 	str_init(&str, ws);
@@ -239,25 +527,27 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 	if (ret < 0)
 		return -1;
 
-
 	if (ws->sid_set != 0) {
 		char safe_id[SAFE_ID_SIZE];
 
-		oc_base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
-			      sizeof(context));
+		oc_base64_encode((char *)ws->sid, sizeof(ws->sid),
+				 (char *)context, sizeof(context));
 
 		ret =
 		    cstp_printf(ws,
-			       "Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
-			       context, (unsigned)WSCONFIG(ws)->cookie_timeout);
+				"Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
+				context,
+				(unsigned)WSCONFIG(ws)->cookie_timeout);
 		if (ret < 0)
 			return -1;
 
-		oclog(ws, LOG_SENSITIVE, "sent session id: %s", calc_safe_id(ws->sid, sizeof(ws->sid), safe_id, sizeof(safe_id)));
+		oclog(ws, LOG_SENSITIVE, "sent session id: %s",
+		      calc_safe_id(ws->sid, sizeof(ws->sid), safe_id,
+				   sizeof(safe_id)));
 	} else {
 		ret =
 		    cstp_puts(ws,
-			     "Set-Cookie: webvpncontext=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
+			      "Set-Cookie: webvpncontext=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
 		if (ret < 0)
 			return -1;
 	}
@@ -270,7 +560,9 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 
 	if (ws->auth_state == S_AUTH_REQ) {
 		/* only ask password */
-		if (pmsg == NULL || strncasecmp(pmsg, DEFAULT_PASSWD_LABEL, sizeof(DEFAULT_PASSWD_LABEL)-1) == 0)
+		if (pmsg == NULL
+		    || strncasecmp(pmsg, DEFAULT_PASSWD_LABEL,
+				   sizeof(DEFAULT_PASSWD_LABEL) - 1) == 0)
 			pmsg = "Please enter your password.";
 
 		ret = str_append_printf(&str, login_msg_start, pmsg);
@@ -280,7 +572,9 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 		}
 
 		if (pcounter > 0)
-			ret = str_append_printf(&str, LOGIN_MSG_PASSWORD_CTR, pcounter);
+			ret =
+			    str_append_printf(&str, LOGIN_MSG_PASSWORD_CTR,
+					      pcounter);
 		else
 			ret = str_append_str(&str, LOGIN_MSG_PASSWORD);
 		if (ret < 0) {
@@ -293,8 +587,12 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 			ret = -1;
 			goto cleanup;
 		}
-
 	} else {
+#ifdef HAVE_SAML
+		if (ws->selected_auth->type & AUTH_TYPE_SAML) {
+			pmsg = ws->vhost->perm_config.config->default_domain;
+		}
+#endif
 		if (pmsg == NULL)
 			pmsg = "Please enter your username.";
 
@@ -313,18 +611,23 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 			}
 		}
 
-		if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE) && ws->cert_auth_ok != 0) {
+		if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE)
+		    && ws->cert_auth_ok != 0) {
 			ret = get_cert_info(ws);
 			if (ret < 0) {
 				ret = -1;
-				oclog(ws, LOG_WARNING, "cannot obtain certificate information");
+				oclog(ws, LOG_WARNING,
+				      "cannot obtain certificate information");
 				goto cleanup;
 			}
 		}
 
 		/* send groups */
-		if (WSCONFIG(ws)->group_list_size > 0 || ws->cert_groups_size > 0) {
-			ret = str_append_str(&str, "<select name=\"group_list\" label=\"Group:\">\n");
+		if (WSCONFIG(ws)->group_list_size > 0
+		    || ws->cert_groups_size > 0) {
+			ret =
+			    str_append_str(&str,
+					   "<select name=\"group_list\" label=\"Group:\">\n");
 			if (ret < 0) {
 				ret = -1;
 				goto cleanup;
@@ -344,7 +647,11 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 			}
 
 			if (WSCONFIG(ws)->default_select_group) {
-				ret = str_append_printf(&str, "<option>%s</option>\n", WSCONFIG(ws)->default_select_group);
+				ret =
+				    str_append_printf(&str,
+						      "<option>%s</option>\n",
+						      WSCONFIG(ws)->
+						      default_select_group);
 				if (ret < 0) {
 					ret = -1;
 					goto cleanup;
@@ -352,25 +659,37 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 			}
 
 			/* append any groups available in the certificate */
-			if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE) && ws->cert_auth_ok != 0) {
+			if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE)
+			    && ws->cert_auth_ok != 0) {
 				unsigned dup;
 
-				for (i=0;i<ws->cert_groups_size;i++) {
+				for (i = 0; i < ws->cert_groups_size; i++) {
 					dup = 0;
-					for (j=0;j<WSCONFIG(ws)->group_list_size;j++) {
-						if (strcmp(ws->cert_groups[i], WSCONFIG(ws)->group_list[j]) == 0) {
+					for (j = 0;
+					     j < WSCONFIG(ws)->group_list_size;
+					     j++) {
+						if (strcmp
+						    (ws->cert_groups[i],
+						     WSCONFIG(ws)->
+						     group_list[j]) == 0) {
 							dup = 1;
 							break;
 						}
 					}
 
-					if (dup == 0 && ws->groupname[0] != 0 && strcmp(ws->groupname, ws->cert_groups[i]) == 0)
+					if (dup == 0 && ws->groupname[0] != 0
+					    && strcmp(ws->groupname,
+						      ws->cert_groups[i]) == 0)
 						dup = 1;
 
 					if (dup != 0)
 						continue;
 
-					ret = str_append_printf(&str, "<option>%s</option>\n", ws->cert_groups[i]);
+					ret =
+					    str_append_printf(&str,
+							      "<option>%s</option>\n",
+							      ws->
+							      cert_groups[i]);
 					if (ret < 0) {
 						ret = -1;
 						goto cleanup;
@@ -378,9 +697,10 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 				}
 			}
 
-
-			for (i=0;i<WSCONFIG(ws)->group_list_size;i++) {
-				if (ws->groupname[0] != 0 && strcmp(ws->groupname, WSCONFIG(ws)->group_list[i]) == 0)
+			for (i = 0; i < WSCONFIG(ws)->group_list_size; i++) {
+				if (ws->groupname[0] != 0
+				    && strcmp(ws->groupname,
+					      WSCONFIG(ws)->group_list[i]) == 0)
 					continue;
 
 				ret = append_group_idx(ws, &str, i);
@@ -405,8 +725,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 	}
 
 	ret =
-	    cstp_printf(ws, "Content-Length: %u\r\n",
-		       (unsigned int)str.length);
+	    cstp_printf(ws, "Content-Length: %u\r\n", (unsigned int)str.length);
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
@@ -430,7 +749,6 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 		goto cleanup;
 	}
 
-
 	ret = cstp_uncork(ws);
 	if (ret < 0) {
 		ret = -1;
@@ -440,7 +758,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 	ret = 0;
 
  cleanup:
- 	str_clear(&str);
+	str_clear(&str);
 	return ret;
 }
 
@@ -457,7 +775,7 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 	size_t size;
 
 	if (ws->cert_username[0] != 0 || ws->cert_groups_size > 0)
-		return 0; /* already read, nothing to do */
+		return 0;	/* already read, nothing to do */
 
 	ret = gnutls_x509_crt_init(&crt);
 	if (ret < 0) {
@@ -478,8 +796,7 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 			size = sizeof(ws->cert_username);
 			ret =
 			    gnutls_x509_crt_get_subject_alt_name(crt, i,
-								 ws->
-								 cert_username,
+								 ws->cert_username,
 								 &size, NULL);
 			if (ret < 0)
 				break;
@@ -497,22 +814,27 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 		size = sizeof(ws->cert_username);
 		ret =
 		    gnutls_x509_crt_get_dn_by_oid(crt,
-					  WSCONFIG(ws)->cert_user_oid, 0,
-					  0, ws->cert_username, &size);
+						  WSCONFIG(ws)->cert_user_oid,
+						  0, 0, ws->cert_username,
+						  &size);
 	} else {
 		ret = gnutls_x509_crt_get_dn(crt, ws->cert_username, &size);
 	}
 
 	if (ret < 0) {
 		if (ret == GNUTLS_E_SHORT_MEMORY_BUFFER)
-			oclog(ws, LOG_ERR, "certificate's username exceed the maximum buffer size (%u)",
+			oclog(ws, LOG_ERR,
+			      "certificate's username exceed the maximum buffer size (%u)",
 			      (unsigned)sizeof(ws->cert_username));
 		else if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
-			oclog(ws, LOG_ERR, "the certificate's DN does not contain OID %s; cannot determine username",
+			oclog(ws, LOG_ERR,
+			      "the certificate's DN does not contain OID %s; cannot determine username",
 			      WSCONFIG(ws)->cert_user_oid);
 		} else {
-			oclog(ws, LOG_ERR, "cannot obtain user name from certificate DN(%s): %s",
-			      WSCONFIG(ws)->cert_user_oid, gnutls_strerror(ret));
+			oclog(ws, LOG_ERR,
+			      "cannot obtain user name from certificate DN(%s): %s",
+			      WSCONFIG(ws)->cert_user_oid,
+			      gnutls_strerror(ret));
 		}
 		goto fail;
 	}
@@ -520,9 +842,11 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 	if (WSCONFIG(ws)->cert_group_oid) {
 		i = 0;
 		do {
-			ws->cert_groups = talloc_realloc(ws, ws->cert_groups, char*,  i+1);
+			ws->cert_groups =
+			    talloc_realloc(ws, ws->cert_groups, char *, i + 1);
 			if (ws->cert_groups == NULL) {
-				oclog(ws, LOG_ERR, "cannot allocate memory for cert groups");
+				oclog(ws, LOG_ERR,
+				      "cannot allocate memory for cert groups");
 				ret = -1;
 				goto fail;
 			}
@@ -530,8 +854,9 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 			size = 0;
 			ret =
 			    gnutls_x509_crt_get_dn_by_oid(crt,
-						  WSCONFIG(ws)->cert_group_oid, i,
-						  0, NULL, &size);
+							  WSCONFIG(ws)->
+							  cert_group_oid, i, 0,
+							  NULL, &size);
 			if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE)
 				break;
 
@@ -540,21 +865,25 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 					ret = GNUTLS_E_INTERNAL_ERROR;
 				oclog(ws, LOG_ERR,
 				      "cannot obtain group from certificate DN(%s): %s",
-				      WSCONFIG(ws)->cert_group_oid, gnutls_strerror(ret));
+				      WSCONFIG(ws)->cert_group_oid,
+				      gnutls_strerror(ret));
 				goto fail;
 			}
 
 			ws->cert_groups[i] = talloc_size(ws->cert_groups, size);
 			if (ws->cert_groups[i] == NULL) {
-				oclog(ws, LOG_ERR, "cannot allocate memory for cert group");
+				oclog(ws, LOG_ERR,
+				      "cannot allocate memory for cert group");
 				ret = -1;
 				goto fail;
 			}
 
 			ret =
 			    gnutls_x509_crt_get_dn_by_oid(crt,
-						  WSCONFIG(ws)->cert_group_oid, i,
-						  0, ws->cert_groups[i], &size);
+							  WSCONFIG(ws)->
+							  cert_group_oid, i, 0,
+							  ws->cert_groups[i],
+							  &size);
 			if (ret < 0) {
 				oclog(ws, LOG_ERR,
 				      "cannot obtain group from certificate DN: %s",
@@ -580,10 +909,10 @@ unsigned check_if_default_route(char **routes, unsigned routes_size)
 {
 	unsigned i;
 
-	for (i=0;i<routes_size;i++) {
+	for (i = 0; i < routes_size; i++) {
 		if (strcmp(routes[i], "default") == 0 ||
 		    strcmp(routes[i], "0.0.0.0/0") == 0)
-		    return 1;
+			return 1;
 	}
 
 	return 0;
@@ -617,7 +946,9 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				ret = ERR_AUTH_FAIL;
 				goto cleanup;
 			}
-			if (msg->vname == NULL || msg->config == NULL || msg->user_name == NULL || msg->sid.len != sizeof(ws->sid)) {
+			if (msg->vname == NULL || msg->config == NULL
+			    || msg->user_name == NULL
+			    || msg->sid.len != sizeof(ws->sid)) {
 				ret = ERR_AUTH_FAIL;
 				goto cleanup;
 			}
@@ -626,11 +957,14 @@ static int recv_cookie_auth_reply(worker_st * ws)
 			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
 			ws->sid_set = 1;
 
-			strlcpy(ws->vinfo.name, msg->vname, sizeof(ws->vinfo.name));
-			strlcpy(ws->username, msg->user_name, sizeof(ws->username));
+			strlcpy(ws->vinfo.name, msg->vname,
+				sizeof(ws->vinfo.name));
+			strlcpy(ws->username, msg->user_name,
+				sizeof(ws->username));
 
 			if (msg->group_name != NULL) {
-				strlcpy(ws->groupname, msg->group_name, sizeof(ws->groupname));
+				strlcpy(ws->groupname, msg->group_name,
+					sizeof(ws->groupname));
 			} else {
 				ws->groupname[0] = 0;
 			}
@@ -680,7 +1014,8 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				WSPCONFIG(ws)->udp_port = 0;
 
 			/* routes */
-			if (check_if_default_route(msg->config->routes, msg->config->n_routes))
+			if (check_if_default_route
+			    (msg->config->routes, msg->config->n_routes))
 				ws->default_route = 1;
 		} else {
 			oclog(ws, LOG_ERR, "error in received message");
@@ -735,7 +1070,8 @@ int connect_to_secmod(worker_st * ws)
 	return sd;
 }
 
-static int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounter)
+static int recv_auth_reply(worker_st * ws, int sd, char **txt,
+			   unsigned *pcounter)
 {
 	int ret;
 	SecAuthReplyMsg *msg = NULL;
@@ -755,7 +1091,8 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounte
 	oclog(ws, LOG_DEBUG, "received auth reply message (value: %u)",
 	      (unsigned)msg->reply);
 
-	if (txt) *txt = NULL;
+	if (txt)
+		*txt = NULL;
 
 	switch (msg->reply) {
 	case AUTH__REP__MSG:
@@ -850,9 +1187,11 @@ int get_cert_info(worker_st * ws)
 	ret = get_cert_names(ws, cert);
 	if (ret < 0) {
 		if (WSCONFIG(ws)->cert_user_oid == NULL) {
-			oclog(ws, LOG_ERR, "cannot read username from certificate; cert-user-oid is not set");
+			oclog(ws, LOG_ERR,
+			      "cannot read username from certificate; cert-user-oid is not set");
 		} else {
-			oclog(ws, LOG_ERR, "cannot read username from certificate");
+			oclog(ws, LOG_ERR,
+			      "cannot read username from certificate");
 		}
 		return -1;
 	}
@@ -863,7 +1202,7 @@ int get_cert_info(worker_st * ws)
 /* This makes sure that the provided cookie is valid,
  * and fills in the ws->user_config.
  */
-void cookie_authenticate_or_exit(worker_st *ws)
+void cookie_authenticate_or_exit(worker_st * ws)
 {
 	int ret;
 
@@ -873,8 +1212,7 @@ void cookie_authenticate_or_exit(worker_st *ws)
 	/* we must be in S_AUTH_COOKIE state */
 	if (ws->auth_state != S_AUTH_COOKIE || ws->cookie_set == 0) {
 		oclog(ws, LOG_WARNING, "no cookie found");
-		cstp_puts(ws,
-			 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		cstp_puts(ws, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 		exit_worker(ws);
 	}
@@ -886,10 +1224,10 @@ void cookie_authenticate_or_exit(worker_st *ws)
 		oclog(ws, LOG_WARNING, "failed cookie authentication attempt");
 		if (ret == ERR_AUTH_FAIL) {
 			cstp_puts(ws,
-				 "HTTP/1.1 401 Cookie is not acceptable\r\n\r\n");
+				  "HTTP/1.1 401 Cookie is not acceptable\r\n\r\n");
 		} else {
 			cstp_puts(ws,
-				 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+				  "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		}
 		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 		exit_worker(ws);
@@ -915,7 +1253,8 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 		} else {
 			ret = get_cert_info(ws);
 			if (ret < 0) {
-				oclog(ws, LOG_INFO, "cannot obtain certificate info");
+				oclog(ws, LOG_INFO,
+				      "cannot obtain certificate info");
 				return -1;
 			}
 		}
@@ -946,7 +1285,7 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 {
 	int ret, size;
-	char str_cookie[BASE64_ENCODE_RAW_LENGTH(sizeof(ws->cookie))+1];
+	char str_cookie[BASE64_ENCODE_RAW_LENGTH(sizeof(ws->cookie)) + 1];
 	size_t str_cookie_size = sizeof(str_cookie);
 	char msg[MAX_BANNER_SIZE + 32];
 	const char *success_msg_head;
@@ -957,26 +1296,40 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	if (ws->req.user_agent_type == AGENT_OPENCONNECT_V3) {
 		success_msg_head = ocv3_success_msg_head;
 		success_msg_foot = talloc_strdup(ws, ocv3_success_msg_foot);
-		success_msg_head_size = sizeof(ocv3_success_msg_head)-1;
+		success_msg_head_size = sizeof(ocv3_success_msg_head) - 1;
 		success_msg_foot_size = strlen(success_msg_foot);
+#ifdef HAVE_SAML
+	} else if (ws->selected_auth->type & AUTH_TYPE_SAML && imsg == NULL) {
+		success_msg_head = saml_assertion_valid;
+		success_msg_head_size = sizeof(saml_assertion_valid) - 1;
+		success_msg_foot = NULL;
+		success_msg_foot_size = 0;
+#endif
 	} else {
 		success_msg_head = oc_success_msg_head;
 		if (WSCONFIG(ws)->xml_config_file) {
-			success_msg_foot = talloc_asprintf(ws, OC_SUCCESS_MSG_FOOT_PROFILE,
-				WSCONFIG(ws)->xml_config_file, WSCONFIG(ws)->xml_config_hash);
+			success_msg_foot =
+			    talloc_asprintf(ws, OC_SUCCESS_MSG_FOOT_PROFILE,
+					    WSCONFIG(ws)->xml_config_file,
+					    WSCONFIG(ws)->xml_config_hash);
 		} else {
-			success_msg_foot = talloc_strdup(ws, OC_SUCCESS_MSG_FOOT);
+			success_msg_foot =
+			    talloc_strdup(ws, OC_SUCCESS_MSG_FOOT);
 		}
 
 		if (success_msg_foot == NULL)
 			return -1;
 
-		success_msg_head_size = sizeof(oc_success_msg_head)-1;
+		success_msg_head_size = sizeof(oc_success_msg_head) - 1;
 		success_msg_foot_size = strlen(success_msg_foot);
 	}
 
-	oc_base64_encode((char *)ws->cookie, sizeof(ws->cookie),
-		      (char *)str_cookie, str_cookie_size);
+	if (ws->selected_auth->type & AUTH_TYPE_SAML && imsg != NULL) {
+		strcpy(str_cookie, imsg);
+	} else {
+		oc_base64_encode((char *)ws->cookie, sizeof(ws->cookie),
+				 (char *)str_cookie, str_cookie_size);
+	}
 
 	/* reply */
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 200 OK");
@@ -990,13 +1343,20 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	if (ret < 0)
 		goto fail;
 
-	if ((ws->selected_auth->type & AUTH_TYPE_GSSAPI) && imsg != NULL && imsg[0] != 0) {
-		ret = cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", imsg);
+	if ((ws->selected_auth->type & AUTH_TYPE_GSSAPI) && imsg != NULL
+	    && imsg[0] != 0) {
+		ret =
+		    cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", imsg);
 		if (ret < 0)
 			goto fail;
 	}
 
-	ret = cstp_puts(ws, "Content-Type: text/xml\r\n");
+	if (ws->selected_auth->type & AUTH_TYPE_SAML && imsg == NULL) {
+		ret =
+		    cstp_puts(ws, "Content-Type: text/html; charset=utf-8\r\n");
+	} else {
+		ret = cstp_puts(ws, "Content-Type: text/xml\r\n");
+	}
 	if (ret < 0)
 		goto fail;
 
@@ -1027,44 +1387,53 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		char context[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
 		char safe_id[SAFE_ID_SIZE];
 
-		oc_base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
-			         sizeof(context));
+		oc_base64_encode((char *)ws->sid, sizeof(ws->sid),
+				 (char *)context, sizeof(context));
 
 		ret =
 		    cstp_printf(ws,
-			       "Set-Cookie: webvpncontext=%s; Secure\r\n",
-			       context);
+				"Set-Cookie: webvpncontext=%s; Secure\r\n",
+				context);
 		if (ret < 0)
 			goto fail;
 
-		oclog(ws, LOG_SENSITIVE, "sent session id: %s", calc_safe_id(ws->sid, sizeof(ws->sid), safe_id, sizeof(safe_id)));
+		oclog(ws, LOG_SENSITIVE, "sent session id: %s",
+		      calc_safe_id(ws->sid, sizeof(ws->sid), safe_id,
+				   sizeof(safe_id)));
 	}
+#ifdef HAVE_SAML
+	if (ws->selected_auth->type & AUTH_TYPE_SAML && imsg == NULL) {
+		ret =
+		    cstp_printf(ws,
+				"Set-Cookie: acSamlv2Token=%s; path=/; secure\r\n",
+				str_cookie);
+		if (ret < 0)
+			goto fail;
+	}
+#endif
 
-	ret =
-	    cstp_printf(ws,
-		       "Set-Cookie: webvpn=%s; Secure\r\n",
-		       str_cookie);
+	ret = cstp_printf(ws, "Set-Cookie: webvpn=%s; Secure\r\n", str_cookie);
 	if (ret < 0)
 		goto fail;
 
 	ret =
 	    cstp_puts(ws,
-		     "Set-Cookie: webvpnc=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
+		      "Set-Cookie: webvpnc=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
 	if (ret < 0)
 		goto fail;
 
 	if (WSCONFIG(ws)->xml_config_file) {
 		ret =
 		    cstp_printf(ws,
-			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s&lu:/+CSCOT+/translation-table?textdomain%%3DAnyConnect%%26type%%3Dmanifest&fu:profiles%%2F%s&fh:%s; path=/; Secure\r\n",
-			       WSPCONFIG(ws)->cert_hash,
-			       WSCONFIG(ws)->xml_config_file,
-			       WSCONFIG(ws)->xml_config_hash);
+				"Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s&lu:/+CSCOT+/translation-table?textdomain%%3DAnyConnect%%26type%%3Dmanifest&fu:profiles%%2F%s&fh:%s; path=/; Secure\r\n",
+				WSPCONFIG(ws)->cert_hash,
+				WSCONFIG(ws)->xml_config_file,
+				WSCONFIG(ws)->xml_config_hash);
 	} else {
 		ret =
 		    cstp_printf(ws,
-			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s; path=/; Secure\r\n",
-			       WSPCONFIG(ws)->cert_hash);
+				"Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s; path=/; Secure\r\n",
+				WSPCONFIG(ws)->cert_hash);
 	}
 
 	if (ret < 0)
@@ -1072,7 +1441,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 
 	ret =
 	    cstp_printf(ws,
-		       "\r\n%s%s%s", success_msg_head, msg, success_msg_foot);
+			"\r\n%s%s%s", success_msg_head, msg, success_msg_foot);
 	if (ret < 0)
 		goto fail;
 
@@ -1107,11 +1476,9 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
 		xml = 1;
 
 		/* body should contain <password?>test</password?> or <xxx_password>test</xxx_password> */
-		*value =
-		    strcasestr(body, "<password");
+		*value = strcasestr(body, "<password");
 		if (*value == NULL)
-			*value =
-			    strcasestr(body, "_password>");
+			*value = strcasestr(body, "_password>");
 
 		if (*value == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG,
@@ -1130,7 +1497,7 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
 		*value = p;
 		len = 0;
 		while (*p != 0) {
-			if (*p == '<' && *(p+1) == '/') {
+			if (*p == '<' && *(p + 1) == '/') {
 				break;
 			}
 			p++;
@@ -1138,8 +1505,7 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
 		}
 	} else {		/* non-xml version */
 		/* body should be "username=test&password?=test" */
-		*value =
-		    strcasestr(body, "password");
+		*value = strcasestr(body, "password");
 		if (*value == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG,
 			      "cannot find password in client message");
@@ -1195,8 +1561,7 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
 static
 int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		const char *field, unsigned field_size,
-		const char *xml_field, unsigned xml_field_size,
-		char **value)
+		const char *xml_field, unsigned xml_field_size, char **value)
 {
 	char *p;
 	char temp1[64];
@@ -1211,7 +1576,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		xml = 1;
 		if (xml_field) {
 			field = xml_field;
-			/*field_size = xml_field_size;*/
+			/*field_size = xml_field_size; */
 		}
 
 		snprintf(temp1, sizeof(temp1), "<%s>", field);
@@ -1221,8 +1586,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		temp2_len = strlen(temp2);
 
 		/* body should contain <field>test</field> */
-		*value =
-		    strcasestr(body, temp1);
+		*value = strcasestr(body, temp1);
 		if (*value == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG,
 			      "cannot find '%s' in client XML message", field);
@@ -1245,8 +1609,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		temp1_len = strlen(temp1);
 
 		/* body should be "username=test&password=test" */
-		*value =
-		    strcasestr(body, temp1);
+		*value = strcasestr(body, temp1);
 		if (*value == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG,
 			      "cannot find '%s' in client message", field);
@@ -1279,7 +1642,8 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 
 	if (*value == NULL) {
 		oclog(ws, LOG_ERR,
-		      "%s requested but no such field in client message", field);
+		      "%s requested but no such field in client message",
+		      field);
 		return -1;
 	}
 
@@ -1305,11 +1669,14 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 	}
 
 	if (msg == NULL) {
-		oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: Negotiate");
+		oclog(ws, LOG_HTTP_DEBUG,
+		      "HTTP sending: WWW-Authenticate: Negotiate");
 		ret = cstp_puts(ws, "WWW-Authenticate: Negotiate\r\n");
 	} else {
-		oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: Negotiate %s", msg);
-		ret = cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", msg);
+		oclog(ws, LOG_HTTP_DEBUG,
+		      "HTTP sending: WWW-Authenticate: Negotiate %s", msg);
+		ret =
+		    cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", msg);
 	}
 	if (ret < 0)
 		return -1;
@@ -1350,8 +1717,10 @@ int oidc_auth_handler(worker_st * ws, unsigned http_ver)
 	if (ret < 0)
 		return -1;
 
-	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: %s", HTTP_AUTH_OIDC_PREFIX);
-	ret = cstp_printf(ws, "WWW-Authenticate: %s\r\n", HTTP_AUTH_OIDC_PREFIX);
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: %s",
+	      HTTP_AUTH_OIDC_PREFIX);
+	ret =
+	    cstp_printf(ws, "WWW-Authenticate: %s\r\n", HTTP_AUTH_OIDC_PREFIX);
 
 	if (ret < 0)
 		return -1;
@@ -1382,6 +1751,8 @@ int oidc_auth_handler(worker_st * ws, unsigned http_ver)
 #endif
 
 #define USERNAME_FIELD "username"
+#define SSO_TOKEN_FIELD "sso-token"
+#define SAML_RESPONSE_FIELD "SAMLResponse"
 #define GROUPNAME_FIELD "group%5flist"
 #define GROUPNAME_FIELD2 "group_list"
 #define GROUPNAME_FIELD_XML "group-select"
@@ -1390,6 +1761,65 @@ int oidc_auth_handler(worker_st * ws, unsigned http_ver)
 #define MSG_CERT_READ_ERROR "Could not read certificate"
 #define MSG_NO_CERT_ERROR "No certificate"
 #define MSG_NO_PASSWORD_ERROR "No password"
+
+int saml_post_handler(worker_st * ws, unsigned http_ver)
+{
+	// if (strncmp(ws->req.body, "SAMLResponse", 12) == 0) {
+	//      ws->auth_state = S_AUTH_REQ;
+	//      return post_auth_handler(ws, http_ver);
+	// }
+	char *samlresponse = "SAMLResponse";
+
+	if (strstr(ws->req.body, samlresponse) != NULL) {
+		ws->auth_state = S_AUTH_REQ;
+	}
+
+	return post_auth_handler(ws, http_ver);
+}
+
+#ifdef HAVE_SAML
+
+int saml_get_handler(worker_st * ws, unsigned http_ver)
+{
+	int size;
+	char *message;
+	char *url = "/+CSCOE+/logon.html?a0=0&a1=&a2=&a3=1";
+	char *url2 = "/+CSCOE+/saml_ac_login.html";
+
+	if (strncmp(ws->req.url, url, strlen(ws->req.url)) == 0) {
+		cstp_cork(ws);
+		cstp_printf(ws, "HTTP/1.%u 302 Moved Temporarily\r\n",
+			    http_ver);
+		cstp_puts(ws, "Content-Type: text/html; charset=utf-8\r\n");
+		cstp_puts(ws, "Content-Length: 0\r\n");
+		cstp_puts(ws, "Cache-Control: no-store\r\n");
+		cstp_puts(ws, "Pragma: no-cache\r\n");
+		cstp_puts(ws, "Connection: Keep-Alive\r\n");
+		cstp_puts(ws, "X-Frame-Options: SAMEORIGIN\r\n");
+		cstp_puts(ws, "Location: /+CSCOE+/saml_ac_login.html\r\n");
+		cstp_puts(ws, "\r\n");
+		cstp_uncork(ws);
+		return 0;
+	} else if (strncmp(ws->req.url, url2, strlen(ws->req.url)) == 0) {
+		cstp_cork(ws);
+		cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
+		cstp_puts(ws, "Content-Type: text/html; charset=utf-8\r\n");
+		cstp_puts(ws, "Cache-Control: no-store\r\n");
+		cstp_puts(ws, "Pragma: no-cache\r\n");
+		cstp_puts(ws, "Connection: Keep-Alive\r\n");
+		cstp_puts(ws, "X-Frame-Options: SAMEORIGIN\r\n");
+		message = saml_success_page;
+		size = sizeof(saml_success_page) - 1;
+		cstp_printf(ws, "Content-Length: %u\r\n", (unsigned)size);
+		cstp_printf(ws, "\r\n%s", message);
+		cstp_uncork(ws);
+		return 0;
+	} else {
+		return get_auth_handler(ws, http_ver);
+	}
+}
+
+#endif
 
 int post_auth_handler(worker_st * ws, unsigned http_ver)
 {
@@ -1404,8 +1834,38 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	unsigned pcounter = 0;
 
 	if (req->body_length > 0) {
-		oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
-		      req->body);
+		oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'",
+		      (int)req->body_length, req->body);
+#ifdef HAVE_SAML
+		unsigned tmplen;
+		size_t(nlen);
+		char *sso_token = NULL;
+
+		if (strstr(req->body, "sso-token") != NULL) {
+			ret = parse_reply(ws, req->body, req->body_length,
+					  "sso-token",
+					  sizeof(SSO_TOKEN_FIELD) - 1, NULL, 0,
+					  &sso_token);
+			/* attempt to decode sso token... */
+			tmplen = strlen(sso_token);
+			nlen = BASE64_DECODE_LENGTH(tmplen);
+			ret =
+			    oc_base64_decode((uint8_t *) sso_token, tmplen,
+					     ws->sid, &nlen);
+			if (ret == 0 || nlen != sizeof(ws->sid)) {
+				oclog(ws, LOG_SENSITIVE,
+				      "could not decode sid: %.*s",
+				      tmplen, sso_token);
+				ws->sid_set = 0;
+			} else {
+				ws->sid_set = 1;
+				oclog(ws, LOG_SENSITIVE,
+				      "received sid: %.*s", tmplen, sso_token);
+			}
+
+			return post_common_handler(ws, http_ver, sso_token);
+		}
+#endif
 	}
 
 	if (ws->sid_set && ws->auth_state == S_AUTH_INACTIVE)
@@ -1415,24 +1875,28 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		SecAuthInitMsg ireq = SEC_AUTH_INIT_MSG__INIT;
 
 		ret = parse_reply(ws, req->body, req->body_length,
-				GROUPNAME_FIELD, sizeof(GROUPNAME_FIELD)-1,
-				GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
-				&groupname);
+				  GROUPNAME_FIELD, sizeof(GROUPNAME_FIELD) - 1,
+				  GROUPNAME_FIELD_XML,
+				  sizeof(GROUPNAME_FIELD_XML) - 1, &groupname);
 		if (ret < 0) {
 			ret = parse_reply(ws, req->body, req->body_length,
-					GROUPNAME_FIELD2, sizeof(GROUPNAME_FIELD2)-1,
-					GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
-					&groupname);
+					  GROUPNAME_FIELD2,
+					  sizeof(GROUPNAME_FIELD2) - 1,
+					  GROUPNAME_FIELD_XML,
+					  sizeof(GROUPNAME_FIELD_XML) - 1,
+					  &groupname);
 		}
 
 		if (ret < 0) {
 			oclog(ws, LOG_HTTP_DEBUG, "failed reading groupname");
 		} else {
 			if (WSCONFIG(ws)->default_select_group != NULL &&
-				   strcmp(groupname, WSCONFIG(ws)->default_select_group) == 0) {
+			    strcmp(groupname,
+				   WSCONFIG(ws)->default_select_group) == 0) {
 				def_group = 1;
 			} else {
-				strlcpy(ws->groupname, groupname, sizeof(ws->groupname));
+				strlcpy(ws->groupname, groupname,
+					sizeof(ws->groupname));
 				ireq.group_name = ws->groupname;
 			}
 		}
@@ -1440,28 +1904,60 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 #ifdef SUPPORT_OIDC_AUTH
 		if (ws->selected_auth->type & AUTH_TYPE_OIDC) {
-			if (req->authorization == NULL || req->authorization_size == 0)
+			if (req->authorization == NULL
+			    || req->authorization_size == 0)
 				return oidc_auth_handler(ws, http_ver);
 
-			if ((req->authorization_size > (sizeof(HTTP_AUTH_OIDC_PREFIX) - 1)) && strncasecmp(req->authorization, HTTP_AUTH_OIDC_PREFIX, sizeof(HTTP_AUTH_OIDC_PREFIX) - 1) == 0) {
+			if ((req->authorization_size >
+			     (sizeof(HTTP_AUTH_OIDC_PREFIX) - 1))
+			    && strncasecmp(req->authorization,
+					   HTTP_AUTH_OIDC_PREFIX,
+					   sizeof(HTTP_AUTH_OIDC_PREFIX) - 1) ==
+			    0) {
 				ireq.auth_type |= AUTH_TYPE_OIDC;
-				ireq.user_name = req->authorization + sizeof(HTTP_AUTH_OIDC_PREFIX);
+				ireq.user_name =
+				    req->authorization +
+				    sizeof(HTTP_AUTH_OIDC_PREFIX);
 			} else {
-				oclog(ws, LOG_HTTP_DEBUG, "Invalid authorization data: %.*s", req->authorization_size, req->authorization);
+				oclog(ws, LOG_HTTP_DEBUG,
+				      "Invalid authorization data: %.*s",
+				      req->authorization_size,
+				      req->authorization);
 				goto auth_fail;
 			}
 		}
 #endif
 
+#ifdef HAVE_SAML
+		char *saml_sp_login_url = "/+CSCOE+/saml/sp/login";
+		char *saml_assertion_post_url = "/+webvpn+/index.html";
+		char *saml_acs_url = "/+CSCOE+/saml/sp/acs";
+		if (ws->selected_auth->type & AUTH_TYPE_SAML) {
+			if (strncmp
+			    (req->url, saml_sp_login_url,
+			     strlen(saml_sp_login_url)) != 0
+			    && strncmp(req->url, saml_assertion_post_url,
+				       strlen(saml_assertion_post_url)) != 0
+			    && strncmp(req->url, saml_acs_url,
+				       strlen(saml_acs_url)) != 0)
+				goto ask_auth;
+			ireq.auth_type |= AUTH_TYPE_SAML;
+		}
+#endif
+
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
-			if (req->authorization == NULL || req->authorization_size == 0)
+			if (req->authorization == NULL
+			    || req->authorization_size == 0)
 				return basic_auth_handler(ws, http_ver, NULL);
 
 			if (req->authorization_size > 10) {
 				ireq.user_name = req->authorization + 10;
 				ireq.auth_type |= AUTH_TYPE_GSSAPI;
 			} else {
-				oclog(ws, LOG_HTTP_DEBUG, "Invalid authorization data: %.*s", req->authorization_size, req->authorization);
+				oclog(ws, LOG_HTTP_DEBUG,
+				      "Invalid authorization data: %.*s",
+				      req->authorization_size,
+				      req->authorization);
 				goto auth_fail;
 			}
 		}
@@ -1469,11 +1965,12 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		if (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
 
 			ret = parse_reply(ws, req->body, req->body_length,
-					USERNAME_FIELD, sizeof(USERNAME_FIELD)-1,
-					NULL, 0,
-					&username);
+					  USERNAME_FIELD,
+					  sizeof(USERNAME_FIELD) - 1, NULL, 0,
+					  &username);
 			if (ret < 0) {
-				oclog(ws, LOG_HTTP_DEBUG, "failed reading username");
+				oclog(ws, LOG_HTTP_DEBUG,
+				      "failed reading username");
 				goto ask_auth;
 			}
 
@@ -1505,9 +2002,13 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				}
 			}
 
-			if (def_group == 0 && ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
-				oclog(ws, LOG_HTTP_DEBUG, "user has not selected a group");
-				return get_auth_handler2(ws, http_ver, "Please select your group.", 0);
+			if (def_group == 0 && ws->cert_groups_size > 0
+			    && ws->groupname[0] == 0) {
+				oclog(ws, LOG_HTTP_DEBUG,
+				      "user has not selected a group");
+				return get_auth_handler2(ws, http_ver,
+							 "Please select your group.",
+							 0);
 			}
 
 			ireq.tls_auth_ok = ws->cert_auth_ok;
@@ -1521,7 +2022,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		ireq.ip = ws->remote_ip_str;
 		ireq.our_ip = ws->our_ip_str;
 		ireq.session_start_time = ws->session_start_time;
-		ireq.hmac.data = (uint8_t*)ws->sec_auth_init_hmac;
+		ireq.hmac.data = (uint8_t *) ws->sec_auth_init_hmac;
 		ireq.hmac.len = sizeof(ws->sec_auth_init_hmac);
 		if (req->user_agent[0] != 0)
 			ireq.user_agent = req->user_agent;
@@ -1557,19 +2058,42 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		areq.ip = ws->remote_ip_str;
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
-			if (req->authorization == NULL || req->authorization_size <= 10) {
+			if (req->authorization == NULL
+			    || req->authorization_size <= 10) {
 				if (req->authorization != NULL)
-					oclog(ws, LOG_HTTP_DEBUG, "Invalid authorization data: %.*s", req->authorization_size, req->authorization);
+					oclog(ws, LOG_HTTP_DEBUG,
+					      "Invalid authorization data: %.*s",
+					      req->authorization_size,
+					      req->authorization);
 				else
-					oclog(ws, LOG_HTTP_DEBUG, "No authorization data");
+					oclog(ws, LOG_HTTP_DEBUG,
+					      "No authorization data");
 				goto auth_fail;
 			}
 			areq.password = req->authorization + 10;
 		}
+#ifdef HAVE_SAML
+		if (ws->selected_auth->type & AUTH_TYPE_SAML) {
+			ret = parse_reply(ws, req->body, req->body_length,
+					  SAML_RESPONSE_FIELD,
+					  sizeof(SAML_RESPONSE_FIELD) - 1, NULL,
+					  0, &password);
+			if (ret < 0 && req->body == NULL) {
+				reason = MSG_NO_PASSWORD_ERROR;
+				oclog(ws, LOG_ERR, "SAML assertion not found");
+				goto auth_fail;
+			}
 
-		if (areq.password == NULL && (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS)) {
-			ret = match_password_in_reply(ws, req->body, req->body_length,
-						      &password);
+			areq.password = password;
+		}
+#endif
+
+		if (areq.password == NULL
+		    && (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS)) {
+			ret =
+			    match_password_in_reply(ws, req->body,
+						    req->body_length,
+						    &password);
 			if (ret < 0) {
 				reason = MSG_NO_PASSWORD_ERROR;
 				oclog(ws, LOG_ERR, "failed reading password");
@@ -1626,13 +2150,19 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	}
 
 	if (ret == ERR_AUTH_CONTINUE) {
-		
+
 		oclog(ws, LOG_DEBUG, "continuing authentication for '%s'",
 		      ws->username);
 		ws->auth_state = S_AUTH_REQ;
 
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
 			ret = basic_auth_handler(ws, http_ver, msg);
+#ifdef HAVE_SAML
+		} else if (ws->selected_auth->type & AUTH_TYPE_SAML) {
+			ret =
+			    send_saml_request_redirect(ws, http_ver, msg,
+						       pcounter);
+#endif
 		} else {
 			ret = get_auth_handler2(ws, http_ver, msg, pcounter);
 		}
@@ -1657,7 +2187,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	oclog(ws, LOG_HTTP_DEBUG, "user '%s' obtained cookie", ws->username);
 	ws->auth_state = S_AUTH_COOKIE;
 
-	ret = post_common_handler(ws, http_ver, msg);
+	if (ws->selected_auth->type & AUTH_TYPE_SAML)
+		ret = post_common_handler(ws, http_ver, NULL);
+	else
+		ret = post_common_handler(ws, http_ver, msg);
 	goto cleanup;
 
  ask_auth:
@@ -1669,13 +2202,18 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	if (sd != -1)
 		close(sd);
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 401 Unauthorized");
+	cstp_cork(ws);
 	cstp_printf(ws,
-		   "HTTP/1.%d 401 %s\r\nContent-Length: 0\r\n\r\n",
-		   http_ver, reason);
+		    "HTTP/1.%d 401 %s\r\nContent-Length: 0\r\n",
+		    http_ver, reason);
+	cstp_puts(ws,
+		  "Set-Cookie: webvpncontext=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
+	cstp_puts(ws, "\r\n");
+	cstp_uncork(ws);
 	cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 	talloc_free(msg);
 	exit_worker(ws);
  cleanup:
- 	talloc_free(msg);
- 	return ret;
+	talloc_free(msg);
+	return ret;
 }

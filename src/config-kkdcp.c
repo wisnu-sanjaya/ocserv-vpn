@@ -31,7 +31,7 @@
 
 static char *find_space(char *str)
 {
-	while(*str != 0 && c_isspace(*str) == 0) {
+	while (*str != 0 && c_isspace(*str) == 0) {
 		str++;
 	}
 	if (c_isspace(*str))
@@ -39,7 +39,8 @@ static char *find_space(char *str)
 	return NULL;
 }
 
-void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, char **_path, char **_realm)
+void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server,
+			char **_path, char **_realm)
 {
 	char *path, *server, *port, *realm, *p;
 
@@ -74,20 +75,20 @@ void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, 
 		*socktype = SOCK_STREAM;
 	} else {
 		fprintf(stderr, "cannot handle protocol %s\n", server);
-			exit(1);
+		exit(1);
 	}
 	server += 4;
 
 	p = strchr(server, ']');
-	if (p == NULL) { /* IPv4 address or server.name:port */
+	if (p == NULL) {	/* IPv4 address or server.name:port */
 		port = strchr(server, ':');
-	} else { /* [::IPV6address]:PORT */
+	} else {		/* [::IPV6address]:PORT */
 		port = strchr(p, ':');
 		if (port) {
 			*p = 0;
 			p = strchr(server, '[');
 			if (p)
-				server = p+1;
+				server = p + 1;
 		}
 	}
 

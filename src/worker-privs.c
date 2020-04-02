@@ -23,7 +23,7 @@
 #ifdef HAVE_LIBSECCOMP
 
 #ifndef _GNU_SOURCE
-# define _GNU_SOURCE
+#define _GNU_SOURCE
 #endif
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -33,11 +33,11 @@
 
 /* libseccomp 2.4.2 broke accidentally the API. Work around it. */
 #ifndef __SNR_ppoll
-# ifdef __NR_ppoll
-#  define __SNR_ppoll			__NR_ppoll
-# else
-#  define __SNR_ppoll			__PNR_ppoll
-# endif
+#ifdef __NR_ppoll
+#define __SNR_ppoll			__NR_ppoll
+#else
+#define __SNR_ppoll			__PNR_ppoll
+#endif
 #endif
 
 /* On certain cases gnulib defines gettimeofday as macro; avoid that */
@@ -54,7 +54,6 @@ int disable_system_calls(struct worker_st *ws)
 		oclog(ws, LOG_DEBUG, "could not initialize seccomp");
 		return -1;
 	}
-
 #define ADD_SYSCALL(name, ...) \
 	ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(name), __VA_ARGS__); \
 	/* libseccomp returns EDOM for pseudo-syscalls due to a bug */ \
@@ -80,7 +79,7 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(getpid, 0);
 	ADD_SYSCALL(brk, 0);
 #ifdef __NR_getrandom
-	ADD_SYSCALL(getrandom, 0); /* used by gnutls 3.5.x */
+	ADD_SYSCALL(getrandom, 0);	/* used by gnutls 3.5.x */
 #endif
 	ADD_SYSCALL(recvmsg, 0);
 	ADD_SYSCALL(sendmsg, 0);
@@ -139,10 +138,10 @@ int disable_system_calls(struct worker_st *ws)
 		ret = -1;
 		goto fail;
 	}
-	
+
 	ret = 0;
 
-fail:
+ fail:
 	seccomp_release(ctx);
 	return ret;
 }

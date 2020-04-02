@@ -101,3 +101,12 @@ tests/cstp-recv
 tests/html-escape
 tests/proxyproto-v1
 tests/url-escape
+idp-cert.pem
+idpmeta.xml
+spmeta.xml
+sso.conf
+test.conf
+.vscode/c_cpp_properties.json
+.vscode/launch.json
+.vscode/settings.json
+.gitignore

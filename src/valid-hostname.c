@@ -34,11 +34,10 @@ unsigned valid_hostname(const char *host)
 	if (*p == '-')
 		return 0;
 
-	while(*p != 0) {
+	while (*p != 0) {
 		if (!(c_isalnum(*p)) && !(*p == '-'))
 			return 0;
 		p++;
 	}
 	return 1;
 }
-

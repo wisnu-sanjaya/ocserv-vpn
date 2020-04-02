@@ -30,10 +30,11 @@
 #include <vpn.h>
 #include "common-config.h"
 
-static void free_expanded_brackets_string(subcfg_val_st out[MAX_SUBOPTIONS], unsigned size)
+static void free_expanded_brackets_string(subcfg_val_st out[MAX_SUBOPTIONS],
+					  unsigned size)
 {
 	unsigned i;
-	for (i=0;i<size;i++) {
+	for (i = 0; i < size; i++) {
 		talloc_free(out[i].name);
 		talloc_free(out[i].value);
 	}
@@ -42,7 +43,8 @@ static void free_expanded_brackets_string(subcfg_val_st out[MAX_SUBOPTIONS], uns
 /* Returns the number of suboptions processed.
  */
 static
-unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[MAX_SUBOPTIONS])
+unsigned expand_brackets_string(void *pool, const char *str,
+				subcfg_val_st out[MAX_SUBOPTIONS])
 {
 	char *p, *p2, *p3;
 	unsigned len, len2;
@@ -83,27 +85,28 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 		len2 = p3 - p2;
 
 		if (len > 0) {
-			while (c_isspace(p[len-1]))
+			while (c_isspace(p[len - 1]))
 				len--;
 		}
 		if (len2 > 0) {
-			while (c_isspace(p2[len2-1]))
+			while (c_isspace(p2[len2 - 1]))
 				len2--;
 		}
 
 		out[pos].name = talloc_strndup(pool, p, len);
 		out[pos].value = talloc_strndup(pool, p2, len2);
 		pos++;
-		p = p2+len2;
-		while (c_isspace(*p)||*p==',')
+		p = p2 + len2;
+		while (c_isspace(*p) || *p == ',')
 			p++;
-	} while(finish == 0 && pos < MAX_SUBOPTIONS);
+	} while (finish == 0 && pos < MAX_SUBOPTIONS);
 
 	return pos;
 }
 
 #ifdef HAVE_GSSAPI
-void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str)
+void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config,
+				 const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;
@@ -115,22 +118,27 @@ void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 	}
 
 	vals_size = expand_brackets_string(pool, str, vals);
-	for (i=0;i<vals_size;i++) {
+	for (i = 0; i < vals_size; i++) {
 		if (c_strcasecmp(vals[i].name, "keytab") == 0) {
 			additional->keytab = vals[i].value;
 			vals[i].value = NULL;
-		} else if (c_strcasecmp(vals[i].name, "require-local-user-map") == 0) {
-			additional->no_local_map = 1-CHECK_TRUE(vals[i].value);
-		} else if (c_strcasecmp(vals[i].name, "tgt-freshness-time") == 0) {
+		} else if (c_strcasecmp(vals[i].name, "require-local-user-map")
+			   == 0) {
+			additional->no_local_map =
+			    1 - CHECK_TRUE(vals[i].value);
+		} else if (c_strcasecmp(vals[i].name, "tgt-freshness-time") ==
+			   0) {
 			additional->ticket_freshness_secs = atoi(vals[i].value);
 			if (additional->ticket_freshness_secs == 0) {
-				fprintf(stderr, "Invalid value for '%s': %s\n", vals[i].name, vals[i].value);
+				fprintf(stderr, "Invalid value for '%s': %s\n",
+					vals[i].name, vals[i].value);
 				exit(1);
 			}
 		} else if (c_strcasecmp(vals[i].name, "gid-min") == 0) {
 			additional->gid_min = atoi(vals[i].value);
 			if (additional->gid_min < 0) {
-				fprintf(stderr, "error in gid-min value: %d\n", additional->gid_min);
+				fprintf(stderr, "error in gid-min value: %d\n",
+					additional->gid_min);
 				exit(1);
 			}
 		} else {
@@ -205,7 +213,8 @@ static void *get_brackets_string2(void *pool, const char *str)
 	return talloc_strndup(pool, p, len);
 }
 
-void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str)
+void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config,
+				 const char *str)
 {
 	char *p;
 	subcfg_val_st vals[MAX_SUBOPTIONS];
@@ -217,15 +226,18 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 		return NULL;
 	}
 
-	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) { /* legacy format */
-		fprintf(stderr, "Parsing radius auth method subconfig using legacy format\n");
+	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) {	/* legacy format */
+		fprintf(stderr,
+			"Parsing radius auth method subconfig using legacy format\n");
 
 		additional->config = get_brackets_string1(pool, str);
 
 		p = get_brackets_string2(config, str);
 		if (p != NULL) {
 			if (strcasecmp(p, "groupconfig") != 0) {
-				fprintf(stderr, "No known configuration option: %s\n", p);
+				fprintf(stderr,
+					"No known configuration option: %s\n",
+					p);
 				exit(1);
 			}
 			config->sup_config_type = SUP_CONFIG_RADIUS;
@@ -233,18 +245,22 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 	} else {
 		/* new format */
 		vals_size = expand_brackets_string(pool, str, vals);
-		for (i=0;i<vals_size;i++) {
+		for (i = 0; i < vals_size; i++) {
 			if (c_strcasecmp(vals[i].name, "config") == 0) {
 				additional->config = vals[i].value;
 				vals[i].value = NULL;
-			} else if (c_strcasecmp(vals[i].name, "nas-identifier") == 0) {
+			} else if (c_strcasecmp(vals[i].name, "nas-identifier")
+				   == 0) {
 				additional->nas_identifier = vals[i].value;
 				vals[i].value = NULL;
-			} else if (c_strcasecmp(vals[i].name, "groupconfig") == 0) {
+			} else if (c_strcasecmp(vals[i].name, "groupconfig") ==
+				   0) {
 				if (CHECK_TRUE(vals[i].value))
-					config->sup_config_type = SUP_CONFIG_RADIUS;
+					config->sup_config_type =
+					    SUP_CONFIG_RADIUS;
 			} else {
-				fprintf(stderr, "unknown option '%s'\n", vals[i].name);
+				fprintf(stderr, "unknown option '%s'\n",
+					vals[i].name);
 				exit(1);
 			}
 		}
@@ -260,8 +276,36 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 }
 #endif
 
+#ifdef HAVE_SAML
+void *saml_get_brackets_string(void *pool, struct perm_cfg_st *config,
+			       const char *str)
+{
+	subcfg_val_st vals[MAX_SUBOPTIONS];
+	unsigned vals_size, i;
+	saml_cfg_st *additional;
+
+	additional = talloc_zero(pool, saml_cfg_st);
+	if (additional == NULL) {
+		return NULL;
+	}
+
+	vals_size = expand_brackets_string(pool, str, vals);
+	for (i = 0; i < vals_size; i++) {
+		if (c_strcasecmp(vals[i].name, "config") == 0) {
+			additional->config = vals[i].value;
+		}
+	}
+	if (additional->config == NULL) {
+		fprintf(stderr, "No SSO config specified.");
+		exit(1);
+	}
+	return additional;
+}
+#endif
+
 #ifdef HAVE_PAM
-void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str)
+void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config,
+			      const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;
@@ -274,11 +318,12 @@ void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config, const char
 
 	/* new format */
 	vals_size = expand_brackets_string(pool, str, vals);
-	for (i=0;i<vals_size;i++) {
+	for (i = 0; i < vals_size; i++) {
 		if (c_strcasecmp(vals[i].name, "gid-min") == 0) {
 			additional->gid_min = atoi(vals[i].value);
 			if (additional->gid_min < 0) {
-				fprintf(stderr, "error in gid-min value: %d\n", additional->gid_min);
+				fprintf(stderr, "error in gid-min value: %d\n",
+					additional->gid_min);
 				exit(1);
 			}
 		} else {
@@ -292,7 +337,8 @@ void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config, const char
 }
 #endif
 
-void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str)
+void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config,
+				const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;
@@ -303,12 +349,13 @@ void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const ch
 		return NULL;
 	}
 
-	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) { /* legacy format */
-		fprintf(stderr, "Parsing plain auth method subconfig using legacy format\n");
+	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) {	/* legacy format */
+		fprintf(stderr,
+			"Parsing plain auth method subconfig using legacy format\n");
 		additional->passwd = get_brackets_string1(pool, str);
 	} else {
 		vals_size = expand_brackets_string(pool, str, vals);
-		for (i=0;i<vals_size;i++) {
+		for (i = 0; i < vals_size; i++) {
 			if (c_strcasecmp(vals[i].name, "passwd") == 0) {
 				additional->passwd = vals[i].value;
 				vals[i].value = NULL;
@@ -318,7 +365,8 @@ void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const ch
 				vals[i].value = NULL;
 #endif
 			} else {
-				fprintf(stderr, "unknown option '%s'\n", vals[i].name);
+				fprintf(stderr, "unknown option '%s'\n",
+					vals[i].name);
 				exit(1);
 			}
 		}
@@ -333,21 +381,21 @@ void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const ch
 	return additional;
 }
 
-
-void *oidc_get_brackets_string(void * pool, struct perm_cfg_st *config, const char *str)
+void *oidc_get_brackets_string(void *pool, struct perm_cfg_st *config,
+			       const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
-	char * additional = NULL;
+	char *additional = NULL;
 
 	unsigned vals_size, i;
-	
-	vals_size  = expand_brackets_string(pool, str, vals);
 
-	for (i = 0; i < vals_size; i ++)	{
+	vals_size = expand_brackets_string(pool, str, vals);
+
+	for (i = 0; i < vals_size; i++) {
 		if (c_strcasecmp(vals[i].name, "config") == 0) {
 			additional = talloc_strdup(pool, vals[i].value);
 		}
 	}
-	
+
 	return additional;
 }

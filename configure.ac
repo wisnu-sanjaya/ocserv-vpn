@@ -15,7 +15,7 @@ AM_PROG_AR
 AM_PROG_CC_C_O
 AC_PROG_SED
 if [ test "$GCC" = "yes" ];then
-	CFLAGS="$CFLAGS -Wall -Wno-strict-aliasing -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-missing-field-initializers -Wno-implicit-fallthrough -Wno-stringop-truncation"
+	CFLAGS="$CFLAGS -O0 -Wall -Wno-strict-aliasing -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-missing-field-initializers -Wno-implicit-fallthrough -Wno-stringop-truncation"
 fi
 AC_PATH_PROG(CTAGS, ctags, [:])
 AC_PATH_PROG(CSCOPE, cscope, [:])
@@ -281,6 +281,24 @@ fi
 AM_CONDITIONAL(HAVE_CWRAP, test "x$have_cwrap" != xno)
 AM_CONDITIONAL(HAVE_CWRAP_PAM, test "x$have_cwrap_pam" != xno && test "$have_liboath" = yes && test "$pam_enabled" = yes)
 AM_CONDITIONAL(HAVE_CWRAP_ALL, test "x$have_cwrap_nss" != xno && test "x$have_cwrap_pam")
+
+AC_ARG_WITH(saml,
+  AS_HELP_STRING([--without-saml], [do not include SAML support]),
+  test_for_saml=$withval,
+  test_for_saml=yes)
+
+saml_enabled=no
+
+if test "$test_for_saml" = yes;then
+  PKG_CHECK_MODULES([APR1], apr-1)
+  PKG_CHECK_MODULES([GLIB2], glib-2.0)
+  PKG_CHECK_MODULES([LIBXML2], libxml-2.0)
+  PKG_CHECK_MODULES([GOBJECT2], gobject-2.0)
+	PKG_CHECK_MODULES([LASSO], lasso >= 2.5.1, [saml_enabled=yes], [saml_enabled=no])
+  if test "$saml_enabled" = yes;then
+    AC_DEFINE(HAVE_SAML, 1, [have liblasso3])
+  fi
+fi
 
 AC_ARG_WITH(radius,
   AS_HELP_STRING([--without-radius], [do not include Radius support]),
@@ -584,7 +602,7 @@ if test "$have_cwrap_pam" = yes; then
 fi
 
 AC_ARG_ENABLE([oidc-auth],
-  [AS_HELP_STRING([--oidc-auth],
+  [AS_HELP_STRING([--enable-oidc-auth],
                   [whether to support OpenID Connect auth (default is no)])],
   [enable_oidc_auth=$enableval],
   [enable_oidc_auth=no]
@@ -631,6 +649,7 @@ Summary of build options:
   CWrap NSS testing:    ${have_cwrap_nss}
   
   PAM auth backend:     ${pam_enabled}
+  SAML auth backend:    ${saml_enabled}
   Radius auth backend:  ${radius_enabled}
   GSSAPI auth backend:  ${enable_gssapi}
   OIDC Auth backend:    ${enable_oidc_auth}

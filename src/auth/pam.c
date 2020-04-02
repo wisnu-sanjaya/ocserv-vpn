@@ -58,110 +58,118 @@ enum {
 	PAM_S_COMPLETE,
 };
 
-static int ocserv_conv(int msg_size, const struct pam_message **msg, 
-		struct pam_response **resp, void *uptr)
+static int ocserv_conv(int msg_size, const struct pam_message **msg,
+		       struct pam_response **resp, void *uptr)
 {
-struct pam_ctx_st * pctx = uptr;
-unsigned i;
+	struct pam_ctx_st *pctx = uptr;
+	unsigned i;
 
 	if (msg_size == 0)
 		return PAM_SUCCESS;
 
 	str_reset(&pctx->msg);
 
-	pctx->replies = calloc(1, msg_size*sizeof(*pctx->replies));
+	pctx->replies = calloc(1, msg_size * sizeof(*pctx->replies));
 	if (pctx->replies == NULL)
 		return PAM_BUF_ERR;
 
-	for (i=0;i<msg_size;i++) {
+	for (i = 0; i < msg_size; i++) {
 		switch (msg[i]->msg_style) {
-			case PAM_ERROR_MSG:
-			case PAM_TEXT_INFO:
-				syslog(LOG_DEBUG, "PAM-auth conv info: %s", msg[i]->msg);
+		case PAM_ERROR_MSG:
+		case PAM_TEXT_INFO:
+			syslog(LOG_DEBUG, "PAM-auth conv info: %s",
+			       msg[i]->msg);
 
-				str_append_str(&pctx->msg, msg[i]->msg);
-				str_append_data(&pctx->msg, " ", 1);
+			str_append_str(&pctx->msg, msg[i]->msg);
+			str_append_data(&pctx->msg, " ", 1);
+			pctx->sent_msg = 1;
+			break;
+		case PAM_PROMPT_ECHO_OFF:
+		case PAM_PROMPT_ECHO_ON:
+			if (pctx->sent_msg == 0) {
+				/* no message, just asking for password */
+				str_reset(&pctx->msg);
 				pctx->sent_msg = 1;
-				break;
-			case PAM_PROMPT_ECHO_OFF:
-			case PAM_PROMPT_ECHO_ON:
-				if (pctx->sent_msg == 0) {
-					/* no message, just asking for password */
-					str_reset(&pctx->msg);
-					pctx->sent_msg = 1;
 
-				}
+			}
 
-				if (msg[i]->msg) {
-					str_append_str(&pctx->msg, msg[i]->msg);
-				}
+			if (msg[i]->msg) {
+				str_append_str(&pctx->msg, msg[i]->msg);
+			}
 
-				syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, msg: '%s'", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", msg[i]->msg!=NULL?msg[i]->msg:"");
+			syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, msg: '%s'",
+			       (msg[i]->msg_style ==
+				PAM_PROMPT_ECHO_ON) ? "on" : "off",
+			       msg[i]->msg != NULL ? msg[i]->msg : "");
 
-				pctx->state = PAM_S_WAIT_FOR_PASS;
-				pctx->cr_ret = PAM_SUCCESS;
-				co_resume();
-				pctx->state = PAM_S_INIT;
+			pctx->state = PAM_S_WAIT_FOR_PASS;
+			pctx->cr_ret = PAM_SUCCESS;
+			co_resume();
+			pctx->state = PAM_S_INIT;
 
-				if (pctx->password[0] != 0)
-					pctx->replies[i].resp = strdup(pctx->password);
-				pctx->sent_msg = 0;
-				break;
-                }
+			if (pctx->password[0] != 0)
+				pctx->replies[i].resp = strdup(pctx->password);
+			pctx->sent_msg = 0;
+			break;
+		}
 	}
 
 	*resp = pctx->replies;
 	pctx->replies = NULL;
-	return PAM_SUCCESS;  
+	return PAM_SUCCESS;
 }
 
-static void co_auth_user(void* data)
+static void co_auth_user(void *data)
 {
-struct pam_ctx_st * pctx = data;
-int pret;
+	struct pam_ctx_st *pctx = data;
+	int pret;
 
 	pctx->state = PAM_S_INIT;
 
 	pret = pam_authenticate(pctx->ph, 0);
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_INFO, "PAM authenticate error for '%s': %s", pctx->username, pam_strerror(pctx->ph, pret));
+		syslog(LOG_INFO, "PAM authenticate error for '%s': %s",
+		       pctx->username, pam_strerror(pctx->ph, pret));
 		pctx->cr_ret = pret;
 		goto wait;
 	}
-	
+
 	pret = pam_acct_mgmt(pctx->ph, 0);
 	if (pret == PAM_NEW_AUTHTOK_REQD) {
 		/* change password */
-		syslog(LOG_INFO, "Password for user '%s' is expired. Attempting to update...", pctx->username);
+		syslog(LOG_INFO,
+		       "Password for user '%s' is expired. Attempting to update...",
+		       pctx->username);
 
 		pctx->changing = 1;
 		pret = pam_chauthtok(pctx->ph, PAM_CHANGE_EXPIRED_AUTHTOK);
 	}
-	
+
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_INFO, "PAM acct-mgmt error for '%s': %s", pctx->username, pam_strerror(pctx->ph, pret));
+		syslog(LOG_INFO, "PAM acct-mgmt error for '%s': %s",
+		       pctx->username, pam_strerror(pctx->ph, pret));
 		pctx->cr_ret = pret;
 		goto wait;
 	}
-	
+
 	pctx->state = PAM_S_COMPLETE;
 	pctx->cr_ret = PAM_SUCCESS;
 
  wait:
 	/* give control back to the main process */
-	while(1) {
+	while (1) {
 		co_resume();
 	}
 }
 
-static int pam_auth_init(void** ctx, void *pool, void *vctx, const common_auth_init_st *info)
+static int pam_auth_init(void **ctx, void *pool, void *vctx,
+			 const common_auth_init_st * info)
 {
-int pret;
-struct pam_ctx_st * pctx;
+	int pret;
+	struct pam_ctx_st *pctx;
 
 	if (info->username == NULL || info->username[0] == 0) {
-		syslog(LOG_AUTH,
-		       "pam-auth: no username present");
+		syslog(LOG_AUTH, "pam-auth: no username present");
 		return ERR_AUTH_FAIL;
 	}
 
@@ -175,7 +183,8 @@ struct pam_ctx_st * pctx;
 	pctx->dc.appdata_ptr = pctx;
 	pret = pam_start(PACKAGE, info->username, &pctx->dc, &pctx->ph);
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_AUTH, "PAM-auth init: %s", pam_strerror(pctx->ph, pret));
+		syslog(LOG_AUTH, "PAM-auth init: %s",
+		       pam_strerror(pctx->ph, pret));
 		goto fail1;
 	}
 
@@ -189,20 +198,20 @@ struct pam_ctx_st * pctx;
 		pam_set_item(pctx->ph, PAM_RHOST, info->ip);
 
 	*ctx = pctx;
-	
+
 	return ERR_AUTH_CONTINUE;
 
-fail2:
+ fail2:
 	pam_end(pctx->ph, pret);
-fail1:
+ fail1:
 	talloc_free(pctx);
 	return -1;
 }
 
-static int pam_auth_msg(void* ctx, void *pool, passwd_msg_st *pst)
+static int pam_auth_msg(void *ctx, void *pool, passwd_msg_st * pst)
 {
-struct pam_ctx_st * pctx = ctx;
-size_t prompt_hash = 0;
+	struct pam_ctx_st *pctx = ctx;
+	size_t prompt_hash = 0;
 
 	if (pctx->state != PAM_S_INIT && pctx->state != PAM_S_WAIT_FOR_PASS) {
 		return 0;
@@ -214,22 +223,25 @@ size_t prompt_hash = 0;
 		co_call(pctx->cr);
 
 		if (pctx->cr_ret != PAM_SUCCESS) {
-			syslog(LOG_AUTH, "PAM-auth pam_auth_msg: %s", pam_strerror(pctx->ph, pctx->cr_ret));
+			syslog(LOG_AUTH, "PAM-auth pam_auth_msg: %s",
+			       pam_strerror(pctx->ph, pctx->cr_ret));
 			return ERR_AUTH_FAIL;
 		}
 	}
 
 	if (pctx->msg.length == 0) {
-                if (pctx->changing)
-			pst->msg_str = talloc_strdup(pool, "Please enter the new password.");
-                /* else use the default prompt */
+		if (pctx->changing)
+			pst->msg_str =
+			    talloc_strdup(pool,
+					  "Please enter the new password.");
+		/* else use the default prompt */
 	} else {
 		if (str_append_data(&pctx->msg, "\0", 1) < 0)
 			return -1;
 
 		prompt_hash = hash_any(pctx->msg.data, pctx->msg.length, 0);
 
-		pst->msg_str = talloc_strdup(pool, (char*)pctx->msg.data);
+		pst->msg_str = talloc_strdup(pool, (char *)pctx->msg.data);
 	}
 
 	pst->counter = pctx->passwd_counter;
@@ -246,15 +258,17 @@ size_t prompt_hash = 0;
 
 /* Returns 0 if the user is successfully authenticated
  */
-static int pam_auth_pass(void* ctx, const char* pass, unsigned pass_len)
+static int pam_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 {
-struct pam_ctx_st * pctx = ctx;
+	struct pam_ctx_st *pctx = ctx;
 
-	if (pass == NULL || pass_len+1 > sizeof(pctx->password))
+	if (pass == NULL || pass_len + 1 > sizeof(pctx->password))
 		return -1;
 
 	if (pctx->state != PAM_S_WAIT_FOR_PASS) {
-		syslog(LOG_AUTH, "PAM auth: conversation left in wrong state (%d/expecting %d)", pctx->state, PAM_S_WAIT_FOR_PASS);
+		syslog(LOG_AUTH,
+		       "PAM auth: conversation left in wrong state (%d/expecting %d)",
+		       pctx->state, PAM_S_WAIT_FOR_PASS);
 		return ERR_AUTH_FAIL;
 	}
 
@@ -265,10 +279,11 @@ struct pam_ctx_st * pctx = ctx;
 	co_call(pctx->cr);
 
 	if (pctx->cr_ret != PAM_SUCCESS) {
-		syslog(LOG_AUTH, "PAM-auth pam_auth_pass: %s", pam_strerror(pctx->ph, pctx->cr_ret));
+		syslog(LOG_AUTH, "PAM-auth pam_auth_pass: %s",
+		       pam_strerror(pctx->ph, pctx->cr_ret));
 		return ERR_AUTH_FAIL;
 	}
-	
+
 	if (pctx->state != PAM_S_COMPLETE)
 		return ERR_AUTH_CONTINUE;
 
@@ -277,39 +292,41 @@ struct pam_ctx_st * pctx = ctx;
 
 /* Returns 0 if the user is successfully authenticated
  */
-static int pam_auth_group(void* ctx, const char *suggested, char *groupname, int groupname_size)
+static int pam_auth_group(void *ctx, const char *suggested, char *groupname,
+			  int groupname_size)
 {
-	struct pam_ctx_st * pctx = ctx;
+	struct pam_ctx_st *pctx = ctx;
 
-	return get_user_auth_group(pctx->username, suggested, groupname, groupname_size);
+	return get_user_auth_group(pctx->username, suggested, groupname,
+				   groupname_size);
 }
 
-static int pam_auth_user(void* ctx, char *username, int username_size)
+static int pam_auth_user(void *ctx, char *username, int username_size)
 {
-const char* user = NULL;
-struct pam_ctx_st * pctx = ctx;
-int pret;
+	const char *user = NULL;
+	struct pam_ctx_st *pctx = ctx;
+	int pret;
 
 	username[0] = 0;
 
 	pret = pam_get_item(pctx->ph, PAM_USER, (const void **)&user);
 	if (pret != PAM_SUCCESS) {
-		/*syslog(LOG_AUTH, "PAM-auth: pam_get_item(PAM_USER): %s", pam_strerror(pctx->ph, pret));*/
+		/*syslog(LOG_AUTH, "PAM-auth: pam_get_item(PAM_USER): %s", pam_strerror(pctx->ph, pret)); */
 		return -1;
 	}
-	
+
 	if (user != NULL) {
 		strlcpy(username, user, username_size);
 
 		return 0;
 	}
-	
+
 	return -1;
 }
 
-static void pam_auth_deinit(void* ctx)
+static void pam_auth_deinit(void *ctx)
 {
-struct pam_ctx_st * pctx = ctx;
+	struct pam_ctx_st *pctx = ctx;
 
 	pam_end(pctx->ph, pctx->cr_ret);
 	free(pctx->replies);
@@ -319,7 +336,8 @@ struct pam_ctx_st * pctx = ctx;
 	talloc_free(pctx);
 }
 
-static void pam_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
+static void pam_group_list(void *pool, void *_additional, char ***groupname,
+			   unsigned *groupname_size)
 {
 	struct pam_cfg_st *config = _additional;
 	gid_t min = 0;
@@ -331,14 +349,14 @@ static void pam_group_list(void *pool, void *_additional, char ***groupname, uns
 }
 
 const struct auth_mod_st pam_auth_funcs = {
-  .type = AUTH_TYPE_PAM | AUTH_TYPE_USERNAME_PASS,
-  .auth_init = pam_auth_init,
-  .auth_deinit = pam_auth_deinit,
-  .auth_msg = pam_auth_msg,
-  .auth_pass = pam_auth_pass,
-  .auth_group = pam_auth_group,
-  .auth_user = pam_auth_user,
-  .group_list = pam_group_list
+	.type = AUTH_TYPE_PAM | AUTH_TYPE_USERNAME_PASS,
+	.auth_init = pam_auth_init,
+	.auth_deinit = pam_auth_deinit,
+	.auth_msg = pam_auth_msg,
+	.auth_pass = pam_auth_pass,
+	.auth_group = pam_auth_group,
+	.auth_user = pam_auth_user,
+	.group_list = pam_group_list
 };
 
 #endif

@@ -38,9 +38,9 @@
 #include <minmax.h>
 
 #if defined(HAVE_LINUX_IF_TUN_H)
-# include <linux/if_tun.h>
+#include <linux/if_tun.h>
 #elif defined(HAVE_NET_IF_TUN_H)
-# include <net/if_tun.h>
+#include <net/if_tun.h>
 #endif
 
 #include <netdb.h>
@@ -51,14 +51,14 @@
 #include "vhost.h"
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
-# include <net/if_var.h>
-# include <netinet/in_var.h>
+#include <net/if_var.h>
+#include <netinet/in_var.h>
 #endif
 #if defined(__OpenBSD__)
-# include <netinet6/in6_var.h>
+#include <netinet6/in6_var.h>
 #endif
 #if defined(__DragonFly__)
-# include <net/tun/if_tun.h>
+#include <net/tun/if_tun.h>
 #endif
 
 #ifdef __linux__
@@ -132,7 +132,8 @@ int os_set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	ret = ioctl(fd, SIOCADDRT, &rt6);
 	if (ret != 0) {
 		e = errno;
-		mslog(s, NULL, LOG_ERR, "%s: Error setting route to remote IPv6: %s\n",
+		mslog(s, NULL, LOG_ERR,
+		      "%s: Error setting route to remote IPv6: %s\n",
 		      proc->tun_lease.name, strerror(e));
 		ret = -1;
 		goto cleanup;
@@ -246,9 +247,12 @@ int os_set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	ifr6.ifra_dstaddr.sin6_len = sizeof(struct sockaddr_in6);
 	ifr6.ifra_dstaddr.sin6_family = AF_INET6;
 
-	ret = ipv6_prefix_to_mask(&ifr6.ifra_prefixmask.sin6_addr, proc->ipv6->prefix);
+	ret =
+	    ipv6_prefix_to_mask(&ifr6.ifra_prefixmask.sin6_addr,
+				proc->ipv6->prefix);
 	if (ret == 0) {
-		memset(&ifr6.ifra_prefixmask.sin6_addr, 0xff, sizeof(struct in6_addr));
+		memset(&ifr6.ifra_prefixmask.sin6_addr, 0xff,
+		       sizeof(struct in6_addr));
 	}
 	ifr6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
 	ifr6.ifra_prefixmask.sin6_family = AF_INET6;
@@ -302,7 +306,7 @@ static void os_reset_ipv6_addr(struct proc_st *proc)
 		strlcpy(ifr6.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 
 		memcpy(&ifr6.ifr_addr.sin6_addr, SA_IN6_P(&proc->ipv6->lip),
-			SA_IN_SIZE(proc->ipv6->lip_len));
+		       SA_IN_SIZE(proc->ipv6->lip_len));
 		ifr6.ifr_addr.sin6_len = sizeof(struct sockaddr_in6);
 		ifr6.ifr_addr.sin6_family = AF_INET6;
 
@@ -348,7 +352,8 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 		ifr.ifra_addr.sin_len = sizeof(struct sockaddr_in);
 		ifr.ifra_addr.sin_family = AF_INET;
 
-		memcpy(&ifr.ifra_dstaddr, &proc->ipv4->rip, proc->ipv4->rip_len);
+		memcpy(&ifr.ifra_dstaddr, &proc->ipv4->rip,
+		       proc->ipv4->rip_len);
 		ifr.ifra_dstaddr.sin_len = sizeof(struct sockaddr_in);
 		ifr.ifra_dstaddr.sin_family = AF_INET;
 
@@ -440,7 +445,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
 
-static int bsd_ifrename(main_server_st *s, struct proc_st *proc)
+static int bsd_ifrename(main_server_st * s, struct proc_st *proc)
 {
 #ifdef SIOCSIFNAME
 	int fd = -1;
@@ -460,17 +465,18 @@ static int bsd_ifrename(main_server_st *s, struct proc_st *proc)
 	strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 
 	ret = snprintf(tun_name, sizeof(tun_name), "%s%u",
-		       GETCONFIG(s)->network.name, next_tun_nr+1024);
+		       GETCONFIG(s)->network.name, next_tun_nr + 1024);
 	if (ret >= sizeof(tun_name))
 		next_tun_nr = 0;
 
 	ctr = next_tun_nr;
 
-	for (i=ctr;i<ctr+1024;i++) {
+	for (i = ctr; i < ctr + 1024; i++) {
 		ret = snprintf(tun_name, sizeof(tun_name), "%s%u",
 			       GETCONFIG(s)->network.name, i);
 		if (ret != strlen(tun_name)) {
-			mslog(s, NULL, LOG_ERR, "Truncation error in tun name: %s; adjust 'device' option\n",
+			mslog(s, NULL, LOG_ERR,
+			      "Truncation error in tun name: %s; adjust 'device' option\n",
 			      proc->tun_lease.name);
 			return -1;
 		}
@@ -483,8 +489,9 @@ static int bsd_ifrename(main_server_st *s, struct proc_st *proc)
 			if (e == EEXIST)
 				continue;
 
-			mslog(s, NULL, LOG_ERR, "%s: Error renaming interface: %s\n",
-				proc->tun_lease.name, strerror(e));
+			mslog(s, NULL, LOG_ERR,
+			      "%s: Error renaming interface: %s\n",
+			      proc->tun_lease.name, strerror(e));
 			goto fail;
 		}
 
@@ -492,16 +499,17 @@ static int bsd_ifrename(main_server_st *s, struct proc_st *proc)
 		break;
 	}
 
-
 	/* set new name */
-	next_tun_nr = ctr+1;
+	next_tun_nr = ctr + 1;
 
 	if (renamed) {
-		strlcpy(proc->tun_lease.name, tun_name, sizeof(proc->tun_lease.name));
+		strlcpy(proc->tun_lease.name, tun_name,
+			sizeof(proc->tun_lease.name));
 		ret = 0;
 	} else {
 		e = errno;
-		mslog(s, NULL, LOG_WARNING, "Error renaming interface: %s to %s: %s\n",
+		mslog(s, NULL, LOG_WARNING,
+		      "Error renaming interface: %s to %s: %s\n",
 		      proc->tun_lease.name, tun_name, strerror(e));
 		ret = -1;
 	}
@@ -526,9 +534,13 @@ static int os_open_tun(main_server_st * s, struct proc_st *proc)
 	if (fd == -1) {
 		/* try iterating */
 		e = errno;
-		mslog(s, NULL, LOG_DEBUG, "cannot open /dev/tun; falling back to iteration: %s", strerror(e));
+		mslog(s, NULL, LOG_DEBUG,
+		      "cannot open /dev/tun; falling back to iteration: %s",
+		      strerror(e));
 		for (unit_nr = 0; unit_nr < 255; unit_nr++) {
-			snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "/dev/tun%d", unit_nr);
+			snprintf(proc->tun_lease.name,
+				 sizeof(proc->tun_lease.name), "/dev/tun%d",
+				 unit_nr);
 			fd = open(proc->tun_lease.name, O_RDWR);
 #ifdef SIOCIFCREATE
 			if (fd == -1) {
@@ -536,12 +548,15 @@ static int os_open_tun(main_server_st * s, struct proc_st *proc)
 				sock = socket(AF_INET, SOCK_DGRAM, 0);
 				if (sock < 0) {
 					e = errno;
-					mslog(s, NULL, LOG_ERR, "cannot create tun socket: %s", strerror(e));
+					mslog(s, NULL, LOG_ERR,
+					      "cannot create tun socket: %s",
+					      strerror(e));
 					return -1;
 				}
 
 				memset(&ifr, 0, sizeof(ifr));
-				strncpy(ifr.ifr_name, proc->tun_lease.name + 5, sizeof(ifr.ifr_name) - 1);
+				strncpy(ifr.ifr_name, proc->tun_lease.name + 5,
+					sizeof(ifr.ifr_name) - 1);
 				if (!ioctl(sock, SIOCIFCREATE, &ifr))
 					fd = open(proc->tun_lease.name, O_RDWR);
 				close(sock);
@@ -559,11 +574,13 @@ static int os_open_tun(main_server_st * s, struct proc_st *proc)
 	ret = fstat(fd, &st);
 	if (ret < 0) {
 		e = errno;
-		mslog(s, NULL, LOG_ERR, "tun fd %d: stat: %s\n", fd, strerror(e));
+		mslog(s, NULL, LOG_ERR, "tun fd %d: stat: %s\n", fd,
+		      strerror(e));
 		close(fd);
 		return -1;
 	}
-	strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
+	strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR),
+		sizeof(proc->tun_lease.name));
 
 	if (fd >= 0) {
 		int i, e, ret;
@@ -574,7 +591,7 @@ static int os_open_tun(main_server_st * s, struct proc_st *proc)
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: TUNGIFINFO: %s\n",
-					proc->tun_lease.name, strerror(e));
+			      proc->tun_lease.name, strerror(e));
 		} else {
 			inf.flags |= IFF_MULTICAST;
 
@@ -582,10 +599,10 @@ static int os_open_tun(main_server_st * s, struct proc_st *proc)
 			if (ret < 0) {
 				e = errno;
 				mslog(s, NULL, LOG_ERR, "%s: TUNSIFINFO: %s\n",
-						proc->tun_lease.name, strerror(e));
+				      proc->tun_lease.name, strerror(e));
 			}
 		}
-#else /* FreeBSD + NetBSD */
+#else				/* FreeBSD + NetBSD */
 		i = IFF_POINTOPOINT | IFF_MULTICAST;
 		ret = ioctl(fd, TUNSIFMODE, &i);
 		if (ret < 0) {
@@ -613,7 +630,7 @@ static int os_open_tun(main_server_st * s, struct proc_st *proc)
 			mslog(s, NULL, LOG_ERR, "%s: TUNSIFHEAD: %s\n",
 			      proc->tun_lease.name, strerror(e));
 		}
-#endif /* TUNSIFHEAD */
+#endif				/* TUNSIFHEAD */
 
 	}
 
@@ -633,10 +650,12 @@ static int os_open_tun(main_server_st * s, struct proc_st *proc)
 	struct ifreq ifr;
 	unsigned int t;
 
-	ret = snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "%s%%d",
-		       GETCONFIG(s)->network.name);
+	ret =
+	    snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name),
+		     "%s%%d", GETCONFIG(s)->network.name);
 	if (ret != strlen(proc->tun_lease.name)) {
-		mslog(s, NULL, LOG_ERR, "Truncation error in tun name: %s; adjust 'device' option\n",
+		mslog(s, NULL, LOG_ERR,
+		      "Truncation error in tun name: %s; adjust 'device' option\n",
 		      proc->tun_lease.name);
 		return -1;
 	}
@@ -705,7 +724,7 @@ static int os_open_tun(main_server_st * s, struct proc_st *proc)
 	close(tunfd);
 	return -1;
 }
-#endif /* __linux__ */
+#endif				/* __linux__ */
 
 int open_tun(main_server_st * s, struct proc_st *proc)
 {
@@ -753,7 +772,6 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 		close(proc->tun_lease.fd);
 		proc->tun_lease.fd = -1;
 	}
-
 #ifdef SIOCIFDESTROY
 	int fd = -1;
 	int e, ret;
@@ -770,8 +788,9 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 		ret = ioctl(fd, SIOCIFDESTROY, &ifr);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: Error destroying interface: %s\n",
-				proc->tun_lease.name, strerror(e));
+			mslog(s, NULL, LOG_ERR,
+			      "%s: Error destroying interface: %s\n",
+			      proc->tun_lease.name, strerror(e));
 		}
 	}
 
@@ -821,7 +840,7 @@ static void reset_ipv4_addr(struct proc_st *proc)
 #endif
 }
 
-void reset_tun(struct proc_st* proc)
+void reset_tun(struct proc_st *proc)
 {
 	if (proc->tun_lease.name[0] != 0) {
 		reset_ipv4_addr(proc);
@@ -830,7 +849,7 @@ void reset_tun(struct proc_st* proc)
 }
 
 #if defined(__OpenBSD__) || defined(TUNSIFHEAD)
-# define TUN_AF_PREFIX 1
+#define TUN_AF_PREFIX 1
 #endif
 
 #ifdef TUN_AF_PREFIX
@@ -850,15 +869,16 @@ ssize_t tun_write(int sockfd, const void *buf, size_t len)
 	else {
 		if (!complained) {
 			complained = 1;
-			syslog(LOG_ERR, "tun_write: Unknown packet (len %d) received %02x %02x %02x %02x...\n",
-				(int)len, data[0], data[1], data[2], data[3]);
+			syslog(LOG_ERR,
+			       "tun_write: Unknown packet (len %d) received %02x %02x %02x %02x...\n",
+			       (int)len, data[0], data[1], data[2], data[3]);
 		}
 		return -1;
 	}
 
 	iov[0].iov_base = &head;
 	iov[0].iov_len = sizeof(head);
-	iov[1].iov_base = (void*)buf;
+	iov[1].iov_base = (void *)buf;
 	iov[1].iov_len = len;
 
 	ret = writev(sockfd, iov, 2);
@@ -913,4 +933,4 @@ int tun_claim(int sockfd)
 
 	return (ioctl(sockfd, TUNSIFPID, 0));
 }
-#endif	/* !__FreeBSD__ */
+#endif				/* !__FreeBSD__ */

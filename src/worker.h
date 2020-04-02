@@ -312,6 +312,10 @@ int get_ca_der_handler(worker_st * ws, unsigned http_ver);
 
 int response_404(worker_st *ws, unsigned http_ver);
 int get_empty_handler(worker_st *server, unsigned http_ver);
+int get_saml_metadata_handler(worker_st *server, unsigned http_ver);
+int post_acs_handler(worker_st *server, unsigned http_ver);
+int saml_get_handler(worker_st *server, unsigned http_ver);
+int saml_post_handler(worker_st *server, unsigned http_ver);
 int get_config_handler(worker_st *ws, unsigned http_ver);
 int get_string_handler(worker_st *ws, unsigned http_ver);
 int get_dl_handler(worker_st *ws, unsigned http_ver);

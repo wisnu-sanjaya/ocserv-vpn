@@ -66,10 +66,11 @@ do {									\
 	}								\
 } while (0)
 
-int lzs_decompress(unsigned char *dst, int dstlen, const unsigned char *src, int srclen)
+int lzs_decompress(unsigned char *dst, int dstlen, const unsigned char *src,
+		   int srclen)
 {
 	int outlen = 0;
-	int bits_left = 8; /* Bits left in the current byte at *src */
+	int bits_left = 8;	/* Bits left in the current byte at *src */
 	uint32_t data;
 	uint16_t offset, length;
 
@@ -161,13 +162,14 @@ do {								\
 
 struct oc_packed_uint16_t {
 	uint16_t d;
-} __attribute__((packed));
+} __attribute__ ((packed));
 
 /*
  * Much of the compression algorithm used here is based very loosely on ideas
  * from isdn_lzscomp.c by Andre Beck: http://micky.ibh.de/~beck/stuff/lzs4i4l/
  */
-int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int srclen)
+int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src,
+		 int srclen)
 {
 	int length, offset;
 	int inpos = 0, outpos = 0;
@@ -194,7 +196,7 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 	 * *starting* a match at the penultimate byte of the packet.
 	 */
 #define INVALID_OFS 0xffff
-	uint16_t hash_table[HASH_TABLE_SIZE]; /* Buffer offset for first match */
+	uint16_t hash_table[HASH_TABLE_SIZE];	/* Buffer offset for first match */
 
 	/*
 	 * The second data structure allows us to find the previous occurrences
@@ -203,7 +205,7 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 	 * offset will yield the previous offset at which the same data hash
 	 * value was found.
 	 */
-#define MAX_HISTORY (1<<11) /* Highest offset LZS can represent is 11 bits */
+#define MAX_HISTORY (1<<11)	/* Highest offset LZS can represent is 11 bits */
 	uint16_t hash_chain[MAX_HISTORY];
 
 	/* Just in case anyone tries to use this in a more general-purpose
@@ -237,7 +239,9 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 
 			/* We only get here if longest_match_len is >= 2. We need to find
 			   a match of longest_match_len + 1 for it to be interesting. */
-			if (!memcmp(src + hofs + 2, src + inpos + 2, longest_match_len - 1)) {
+			if (!memcmp
+			    (src + hofs + 2, src + inpos + 2,
+			     longest_match_len - 1)) {
 				longest_match_ofs = hofs;
 
 				do {
@@ -248,7 +252,8 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 					if (longest_match_len + inpos == srclen)
 						goto got_match;
 
-				} while (src[longest_match_len + inpos] == src[longest_match_len + hofs]);
+				} while (src[longest_match_len + inpos] ==
+					 src[longest_match_len + hofs]);
 			}
 
 			/* Typical compressor tuning would have a break out of the loop
@@ -261,7 +266,7 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 			   something. Anyway, we currently don't give up until we run out
 			   of reachable history — maximal compression. */
 		}
-	got_match:
+ got_match:
 		/* Output offset, as 7-bit or 11-bit as appropriate */
 		offset = inpos - longest_match_ofs;
 		length = longest_match_len;
@@ -298,7 +303,8 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 		inpos++;
 		while (--longest_match_len) {
 			hash = HASH(src + inpos);
-			hash_chain[inpos & (MAX_HISTORY - 1)] = hash_table[hash];
+			hash_chain[inpos & (MAX_HISTORY - 1)] =
+			    hash_table[hash];
 			hash_table[hash] = inpos++;
 		}
 	}

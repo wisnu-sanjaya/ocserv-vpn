@@ -52,7 +52,7 @@ int _ocserv_vasprintf(char **strp, const char *fmt, va_list ap)
 	va_end(ap2);
 
 	if (len < 0) {
-	printf_err:
+ printf_err:
 		errno_save = errno;
 		free(res);
 		res = NULL;
@@ -62,11 +62,11 @@ int _ocserv_vasprintf(char **strp, const char *fmt, va_list ap)
 		goto out;
 
 	free(res);
-	res = malloc(len+1);
+	res = malloc(len + 1);
 	if (!res)
 		goto err;
 
-	len2 = vsnprintf(res, len+1, fmt, ap);
+	len2 = vsnprintf(res, len + 1, fmt, ap);
 	if (len2 < 0 || len2 > len)
 		goto printf_err;
 

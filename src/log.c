@@ -30,13 +30,12 @@
 #include <main.h>
 #include <sec-mod.h>
 
-
 void __attribute__ ((format(printf, 3, 4)))
     _oclog(const worker_st * ws, int priority, const char *fmt, ...)
 {
 	char buf[512];
-	char name[MAX_USERNAME_SIZE+MAX_HOSTNAME_SIZE+3];
-	const char* ip;
+	char name[MAX_USERNAME_SIZE + MAX_HOSTNAME_SIZE + 3];
+	const char *ip;
 	va_list args;
 	int debug_prio;
 	unsigned have_vhosts;
@@ -50,21 +49,21 @@ void __attribute__ ((format(printf, 3, 4)))
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {
-	    if (debug_prio < DEBUG_HTTP)
-                return;
-            else
-                priority = LOG_INFO;
-        } else if (priority == LOG_TRANSFER_DEBUG) {
-	    if (debug_prio < DEBUG_TRANSFERRED)
-                return;
-            else
-                priority = LOG_DEBUG;
-        } else if (priority == LOG_SENSITIVE) {
-	    if (debug_prio < DEBUG_SENSITIVE)
-                return;
-            else
-                priority = LOG_DEBUG;
-        }
+		if (debug_prio < DEBUG_HTTP)
+			return;
+		else
+			priority = LOG_INFO;
+	} else if (priority == LOG_TRANSFER_DEBUG) {
+		if (debug_prio < DEBUG_TRANSFERRED)
+			return;
+		else
+			priority = LOG_DEBUG;
+	} else if (priority == LOG_SENSITIVE) {
+		if (debug_prio < DEBUG_SENSITIVE)
+			return;
+		else
+			priority = LOG_DEBUG;
+	}
 
 	ip = ws->remote_ip_str;
 
@@ -75,28 +74,31 @@ void __attribute__ ((format(printf, 3, 4)))
 	have_vhosts = HAVE_VHOSTS(ws);
 
 	if (have_vhosts && ws->username[0] != 0) {
-		snprintf(name, sizeof(name), "[%s%s]", PREFIX_VHOST(ws->vhost), ws->username);
-	} else if (have_vhosts && ws->username[0] == 0 && ws->vhost && ws->vhost->name) {
-		snprintf(name, sizeof(name), "[vhost:%s]", VHOSTNAME(ws->vhost));
+		snprintf(name, sizeof(name), "[%s%s]", PREFIX_VHOST(ws->vhost),
+			 ws->username);
+	} else if (have_vhosts && ws->username[0] == 0 && ws->vhost
+		   && ws->vhost->name) {
+		snprintf(name, sizeof(name), "[vhost:%s]",
+			 VHOSTNAME(ws->vhost));
 	} else if (ws->username[0] != 0) {
 		snprintf(name, sizeof(name), "[%s]", ws->username);
 	} else
 		name[0] = 0;
 
-	syslog(priority, "worker%s: %s %s", name, ip?ip:"[unknown]", buf);
+	syslog(priority, "worker%s: %s %s", name, ip ? ip : "[unknown]", buf);
 
 	return;
 }
 
 /* proc is optional */
 void __attribute__ ((format(printf, 4, 5)))
-    _mslog(const main_server_st * s, const struct proc_st* proc,
-    	int priority, const char *fmt, ...)
+    _mslog(const main_server_st * s, const struct proc_st *proc,
+       int priority, const char *fmt, ...)
 {
 	char buf[512];
 	char ipbuf[128];
-	char name[MAX_USERNAME_SIZE+MAX_HOSTNAME_SIZE+3];
-	const char* ip = NULL;
+	char name[MAX_USERNAME_SIZE + MAX_HOSTNAME_SIZE + 3];
+	const char *ip = NULL;
 	va_list args;
 	int debug_prio;
 	unsigned have_vhosts;
@@ -110,20 +112,20 @@ void __attribute__ ((format(printf, 4, 5)))
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {
-	    if (debug_prio < DEBUG_HTTP)
-                return;
-            else
-                priority = LOG_DEBUG;
-        } else if (priority == LOG_TRANSFER_DEBUG) {
-	    if (debug_prio < DEBUG_TRANSFERRED)
-                return;
-            else
-                priority = LOG_DEBUG;
-        }
+		if (debug_prio < DEBUG_HTTP)
+			return;
+		else
+			priority = LOG_DEBUG;
+	} else if (priority == LOG_TRANSFER_DEBUG) {
+		if (debug_prio < DEBUG_TRANSFERRED)
+			return;
+		else
+			priority = LOG_DEBUG;
+	}
 
 	if (proc) {
-		ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,
-			    ipbuf, sizeof(ipbuf));
+		ip = human_addr((void *)&proc->remote_addr,
+				proc->remote_addr_len, ipbuf, sizeof(ipbuf));
 	} else {
 		ip = "";
 	}
@@ -132,29 +134,33 @@ void __attribute__ ((format(printf, 4, 5)))
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 
-	have_vhosts = s?HAVE_VHOSTS(s):0;
+	have_vhosts = s ? HAVE_VHOSTS(s) : 0;
 
 	if (have_vhosts && proc && proc->username[0] != 0) {
-		snprintf(name, sizeof(name), "[%s%s]", PREFIX_VHOST(proc->vhost), proc->username);
-	} else if (have_vhosts && proc && proc->username[0] == 0 && proc->vhost && proc->vhost->name) {
-		snprintf(name, sizeof(name), "[vhost:%s]", VHOSTNAME(proc->vhost));
+		snprintf(name, sizeof(name), "[%s%s]",
+			 PREFIX_VHOST(proc->vhost), proc->username);
+	} else if (have_vhosts && proc && proc->username[0] == 0 && proc->vhost
+		   && proc->vhost->name) {
+		snprintf(name, sizeof(name), "[vhost:%s]",
+			 VHOSTNAME(proc->vhost));
 	} else if (proc && proc->username[0] != 0) {
 		snprintf(name, sizeof(name), "[%s]", proc->username);
 	} else
 		name[0] = 0;
 
-	syslog(priority, "main%s:%s %s", name, ip?ip:"[unknown]", buf);
+	syslog(priority, "main%s:%s %s", name, ip ? ip : "[unknown]", buf);
 
 	return;
 }
 
-void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
-    	int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
+void mslog_hex(const main_server_st * s, const struct proc_st *proc,
+	       int priority, const char *prefix, uint8_t * bin,
+	       unsigned bin_size, unsigned b64)
 {
 	char buf[512];
 	int ret;
 	size_t buf_size;
-	gnutls_datum_t data = {bin, bin_size};
+	gnutls_datum_t data = { bin, bin_size };
 	int debug_prio;
 
 	if (s)
@@ -166,7 +172,8 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 		return;
 
 	if (b64) {
-		oc_base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+		oc_base64_encode((char *)bin, bin_size, (char *)buf,
+				 sizeof(buf));
 	} else {
 		buf_size = sizeof(buf);
 		ret = gnutls_hex_encode(&data, buf, &buf_size);
@@ -179,13 +186,14 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	return;
 }
 
-void  oclog_hex(const worker_st* ws, int priority,
-		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
+void oclog_hex(const worker_st * ws, int priority,
+	       const char *prefix, uint8_t * bin, unsigned bin_size,
+	       unsigned b64)
 {
 	char buf[512];
 	int ret;
 	size_t buf_size;
-	gnutls_datum_t data = {bin, bin_size};
+	gnutls_datum_t data = { bin, bin_size };
 	int debug_prio;
 
 	if (ws->vhost)
@@ -197,7 +205,8 @@ void  oclog_hex(const worker_st* ws, int priority,
 		return;
 
 	if (b64) {
-		oc_base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+		oc_base64_encode((char *)bin, bin_size, (char *)buf,
+				 sizeof(buf));
 	} else {
 		buf_size = sizeof(buf);
 		ret = gnutls_hex_encode(&data, buf, &buf_size);
@@ -210,19 +219,21 @@ void  oclog_hex(const worker_st* ws, int priority,
 	return;
 }
 
-void  seclog_hex(const struct sec_mod_st* sec, int priority,
-		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
+void seclog_hex(const struct sec_mod_st *sec, int priority,
+		const char *prefix, uint8_t * bin, unsigned bin_size,
+		unsigned b64)
 {
 	char buf[512];
 	int ret;
 	size_t buf_size;
-	gnutls_datum_t data = {bin, bin_size};
+	gnutls_datum_t data = { bin, bin_size };
 
 	if (priority == LOG_DEBUG && GETPCONFIG(sec)->debug == 0)
 		return;
 
 	if (b64) {
-		oc_base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+		oc_base64_encode((char *)bin, bin_size, (char *)buf,
+				 sizeof(buf));
 	} else {
 		buf_size = sizeof(buf);
 		ret = gnutls_hex_encode(&data, buf, &buf_size);

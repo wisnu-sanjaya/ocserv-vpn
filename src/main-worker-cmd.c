@@ -51,7 +51,7 @@
 #include <ev.h>
 
 #ifdef HAVE_MALLOC_TRIM
-# include <malloc.h>
+#include <malloc.h>
 #endif
 
 #include <vpn.h>
@@ -96,7 +96,7 @@ int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
 	return ret;
 }
 
-int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
+int handle_script_exit(main_server_st * s, struct proc_st *proc, int code)
 {
 	int ret;
 
@@ -123,8 +123,7 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 		mslog(s, proc, LOG_INFO,
 		      "failed authentication attempt for user '%s'",
 		      proc->username);
-		ret =
-		    send_cookie_auth_reply(s, proc, AUTH__REP__FAILED);
+		ret = send_cookie_auth_reply(s, proc, AUTH__REP__FAILED);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR,
 			      "could not send reply auth cmd.");
@@ -173,8 +172,7 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 
 	if (cmd == AUTH_COOKIE_REQ) {
 		mslog(s, proc, LOG_DEBUG,
-		      "user of group '%s' authenticated (using cookie)",
-		      group);
+		      "user of group '%s' authenticated (using cookie)", group);
 	} else {
 		mslog(s, proc, LOG_INFO,
 		      "user of group '%s' authenticated but from unknown state! rejecting.",
@@ -197,8 +195,8 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
  * @cmd: the command received
  * @result: the auth result
  */
-static int handle_cookie_auth_res(main_server_st *s, struct proc_st *proc,
-			   unsigned cmd, int result)
+static int handle_cookie_auth_res(main_server_st * s, struct proc_st *proc,
+				  unsigned cmd, int result)
 {
 	int ret;
 
@@ -246,8 +244,7 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 	ret = recv_msg_headers(proc->fd, &cmd, MAX_WAIT_SECS);
 	if (ret < 0) {
 		if (ret == ERR_PEER_TERMINATED)
-			mslog(s, proc, LOG_DEBUG,
-			      "worker terminated");
+			mslog(s, proc, LOG_DEBUG, "worker terminated");
 		else
 			mslog(s, proc, LOG_DEBUG,
 			      "cannot obtain metadata from worker's command socket");
@@ -263,7 +260,8 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 		return ret;
 	}
 
-	mslog(s, proc, LOG_DEBUG, "main received worker's message '%s' of %u bytes\n",
+	mslog(s, proc, LOG_DEBUG,
+	      "main received worker's message '%s' of %u bytes\n",
 	      cmd_request_to_str(cmd), (unsigned)length);
 
 	raw = talloc_size(proc, length);
@@ -290,28 +288,31 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 			tmsg = ban_ip_msg__unpack(&pa, raw_len, raw);
 			if (tmsg == NULL) {
-				mslog(s, NULL, LOG_ERR, "error unpacking worker data");
+				mslog(s, NULL, LOG_ERR,
+				      "error unpacking worker data");
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
 
-			human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len, remote_address, sizeof(remote_address), 0);
+			human_addr2((struct sockaddr *)&proc->remote_addr,
+				    proc->remote_addr_len, remote_address,
+				    sizeof(remote_address), 0);
 
-			ret = add_str_ip_to_ban_list(s, remote_address, tmsg->score);
+			ret =
+			    add_str_ip_to_ban_list(s, remote_address,
+						   tmsg->score);
 
 			ban_ip_msg__free_unpacked(tmsg, &pa);
 
 			if (ret < 0) {
-				reply.reply =
-				    AUTH__REP__FAILED;
+				reply.reply = AUTH__REP__FAILED;
 			} else {
-				reply.reply =
-				    AUTH__REP__OK;
+				reply.reply = AUTH__REP__OK;
 			}
 
 			ret =
-			    send_msg_to_worker(s, proc, CMD_BAN_IP_REPLY, &reply,
-					       (pack_size_func)
+			    send_msg_to_worker(s, proc, CMD_BAN_IP_REPLY,
+					       &reply, (pack_size_func)
 					       ban_ip_reply_msg__get_packed_size,
 					       (pack_func)
 					       ban_ip_reply_msg__pack);
@@ -349,7 +350,8 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 			if (tmsg->mtu < minimum_mtu || tmsg->mtu > maximum_mtu) {
 				mslog(s, proc, LOG_ERR,
-				      "worker process invalid MTU %d", (int)tmsg->mtu);
+				      "worker process invalid MTU %d",
+				      (int)tmsg->mtu);
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
@@ -365,53 +367,74 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 			tmsg = session_info_msg__unpack(&pa, raw_len, raw);
 			if (tmsg == NULL) {
-				mslog(s, proc, LOG_ERR, "error unpacking session info data");
+				mslog(s, proc, LOG_ERR,
+				      "error unpacking session info data");
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
 
 			if (tmsg->tls_ciphersuite)
-				strlcpy(proc->tls_ciphersuite, tmsg->tls_ciphersuite,
-					 sizeof(proc->tls_ciphersuite));
+				strlcpy(proc->tls_ciphersuite,
+					tmsg->tls_ciphersuite,
+					sizeof(proc->tls_ciphersuite));
 			if (tmsg->dtls_ciphersuite)
-				strlcpy(proc->dtls_ciphersuite, tmsg->dtls_ciphersuite,
-					 sizeof(proc->dtls_ciphersuite));
+				strlcpy(proc->dtls_ciphersuite,
+					tmsg->dtls_ciphersuite,
+					sizeof(proc->dtls_ciphersuite));
 			if (tmsg->cstp_compr)
 				strlcpy(proc->cstp_compr, tmsg->cstp_compr,
-					 sizeof(proc->cstp_compr));
+					sizeof(proc->cstp_compr));
 			if (tmsg->dtls_compr)
 				strlcpy(proc->dtls_compr, tmsg->dtls_compr,
-					 sizeof(proc->dtls_compr));
+					sizeof(proc->dtls_compr));
 
 			if (tmsg->user_agent && tmsg->device_type == NULL)
 				strlcpy(proc->user_agent, tmsg->user_agent,
-					 sizeof(proc->user_agent));
+					sizeof(proc->user_agent));
 			else if (tmsg->user_agent && tmsg->device_type)
-				snprintf(proc->user_agent, sizeof(proc->user_agent), "%s / %s",
+				snprintf(proc->user_agent,
+					 sizeof(proc->user_agent), "%s / %s",
 					 tmsg->user_agent, tmsg->device_type);
 
 			if (tmsg->hostname) {
 				strlcpy(proc->hostname, tmsg->hostname,
-					 sizeof(proc->hostname));
-				mslog(s, proc, LOG_DEBUG, "setting worker hostname to '%s'", proc->hostname);
+					sizeof(proc->hostname));
+				mslog(s, proc, LOG_DEBUG,
+				      "setting worker hostname to '%s'",
+				      proc->hostname);
 				user_hostname_update(s, proc);
 			}
 
 			if (GETCONFIG(s)->listen_proxy_proto) {
-				if (tmsg->has_remote_addr && tmsg->remote_addr.len <= sizeof(struct sockaddr_storage)) {
-					proc_table_update_ip(s, proc, (struct sockaddr_storage*)tmsg->remote_addr.data, tmsg->remote_addr.len);
+				if (tmsg->has_remote_addr
+				    && tmsg->remote_addr.len <=
+				    sizeof(struct sockaddr_storage)) {
+					proc_table_update_ip(s, proc,
+							     (struct
+							      sockaddr_storage
+							      *)tmsg->
+							     remote_addr.data,
+							     tmsg->remote_addr.
+							     len);
 
 					/* If the address is in the BAN list, terminate it */
-					if (check_if_banned(s, &proc->remote_addr, proc->remote_addr_len) != 0) {
-						if (proc->pid != -1 && proc->pid != 0) {
+					if (check_if_banned
+					    (s, &proc->remote_addr,
+					     proc->remote_addr_len) != 0) {
+						if (proc->pid != -1
+						    && proc->pid != 0) {
 							kill_proc(proc);
 						}
 					}
 				}
 
-				if (tmsg->has_our_addr && tmsg->our_addr.len <= sizeof(struct sockaddr_storage) &&
-				    tmsg->our_addr.len > 0) {
-					memcpy(&proc->our_addr, tmsg->our_addr.data, tmsg->our_addr.len);
+				if (tmsg->has_our_addr
+				    && tmsg->our_addr.len <=
+				    sizeof(struct sockaddr_storage)
+				    && tmsg->our_addr.len > 0) {
+					memcpy(&proc->our_addr,
+					       tmsg->our_addr.data,
+					       tmsg->our_addr.len);
 					proc->our_addr_len = tmsg->our_addr.len;
 				}
 
@@ -440,7 +463,8 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 		ret = handle_auth_cookie_req(s, proc, auth_cookie_req);
 
 		safe_memset(raw, 0, raw_len);
-		safe_memset(auth_cookie_req->cookie.data, 0, auth_cookie_req->cookie.len);
+		safe_memset(auth_cookie_req->cookie.data, 0,
+			    auth_cookie_req->cookie.len);
 
 		auth_cookie_request_msg__free_unpacked(auth_cookie_req, &pa);
 
@@ -452,7 +476,8 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 		break;
 
 	default:
-		mslog(s, proc, LOG_ERR, "unknown CMD from worker: 0x%x", (unsigned)cmd);
+		mslog(s, proc, LOG_ERR, "unknown CMD from worker: 0x%x",
+		      (unsigned)cmd);
 		ret = ERR_BAD_COMMAND;
 		goto cleanup;
 	}
@@ -463,4 +488,3 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 	return ret;
 }
-

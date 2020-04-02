@@ -66,15 +66,16 @@ typedef struct pp2_tlv {
 } _ATTR_PACKED pp2_tlv;
 
 typedef struct pp2_tlv_ssl {
-	uint8_t  client;
+	uint8_t client;
 	uint32_t verify;
 } _ATTR_PACKED pp2_tlv_ssl;
 
-static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, size_t data_size)
+static void parse_ssl_tlvs(struct worker_st *ws, uint8_t * data,
+			   size_t data_size)
 {
 	pp2_tlv tlv;
 
-	while(data_size > 0) {
+	while (data_size > 0) {
 		AVAIL_HEADER_SIZE(data_size, sizeof(pp2_tlv));
 		memcpy(&tlv, data, sizeof(pp2_tlv));
 
@@ -83,11 +84,13 @@ static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, size_t data_size
 
 		data += sizeof(pp2_tlv);
 
-		oclog(ws, LOG_INFO, "proxy-hdr: TLV type %x", (unsigned)tlv.type);
+		oclog(ws, LOG_INFO, "proxy-hdr: TLV type %x",
+		      (unsigned)tlv.type);
 		if (tlv.type == PP2_TYPE_SSL) {
 			pp2_tlv_ssl tssl;
 			if (tlv.length < sizeof(pp2_tlv_ssl)) {
-				oclog(ws, LOG_ERR, "proxy-hdr: TLV SSL header size is invalid");
+				oclog(ws, LOG_ERR,
+				      "proxy-hdr: TLV SSL header size is invalid");
 				continue;
 			}
 			tlv.length = sizeof(pp2_tlv_ssl);
@@ -95,16 +98,18 @@ static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, size_t data_size
 
 			memcpy(&tssl, data, sizeof(pp2_tlv_ssl));
 
-			if ((tssl.client & PP2_CLIENT_SSL) && 
+			if ((tssl.client & PP2_CLIENT_SSL) &&
 			    (tssl.client & PP2_CLIENT_CERT_SESS) &&
 			    (tssl.verify == 0)) {
-				oclog(ws, LOG_INFO, "proxy-hdr: user has presented valid certificate");
-			    	ws->cert_auth_ok = 1;
-			    	
+				oclog(ws, LOG_INFO,
+				      "proxy-hdr: user has presented valid certificate");
+				ws->cert_auth_ok = 1;
+
 			}
 		} else if (tlv.type == PP2_TYPE_SSL_CN && ws->cert_auth_ok) {
-			if (tlv.length > sizeof(ws->cert_username)-1) {
-				oclog(ws, LOG_ERR, "proxy-hdr: TLV SSL CN header size is too long");
+			if (tlv.length > sizeof(ws->cert_username) - 1) {
+				oclog(ws, LOG_ERR,
+				      "proxy-hdr: TLV SSL CN header size is too long");
 				continue;
 			}
 
@@ -113,7 +118,8 @@ static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, size_t data_size
 			memcpy(ws->cert_username, data, tlv.length);
 			ws->cert_username[tlv.length] = 0;
 
-			oclog(ws, LOG_INFO, "proxy-hdr: user's name is '%s'", ws->cert_username);
+			oclog(ws, LOG_INFO, "proxy-hdr: user's name is '%s'",
+			      ws->cert_username);
 		} else {
 			AVAIL_HEADER_SIZE(data_size, tlv.length);
 		}
@@ -136,7 +142,7 @@ static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
 	memset(&ws->our_addr, 0, sizeof(ws->our_addr));
 
 	if (strncmp(line, "TCP4 ", 5) == 0) {
-		struct sockaddr_in *sa = (void*)&ws->remote_addr;
+		struct sockaddr_in *sa = (void *)&ws->remote_addr;
 
 		ws->our_addr_len = sizeof(struct sockaddr_in);
 		ws->remote_addr_len = sizeof(struct sockaddr_in);
@@ -146,25 +152,27 @@ static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
 
 		next = strchr(line, ' ');
 		if (next == NULL) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
 
 		*next = 0;
 		ret = inet_pton(AF_INET, line, &sa->sin_addr);
 		if (ret != 1) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header: %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header: %s", line);
 			return -1;
 		}
 
-
-		sa = (void*)&ws->our_addr;
+		sa = (void *)&ws->our_addr;
 		sa->sin_family = AF_INET;
 
-		line = next+1;
+		line = next + 1;
 		next = strchr(line, ' ');
 		if (next == NULL) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
 
@@ -172,27 +180,29 @@ static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
 
 		ret = inet_pton(AF_INET, line, &sa->sin_addr);
 		if (ret != 1) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
 
-		line = next+1;
+		line = next + 1;
 
-		sa = (void*)&ws->remote_addr;
+		sa = (void *)&ws->remote_addr;
 		sa->sin_port = htons(atoi(line));
 
 		next = strchr(line, ' ');
 		if (next == NULL) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
 
-		line = next+1;
+		line = next + 1;
 
-		sa = (void*)&ws->our_addr;
+		sa = (void *)&ws->our_addr;
 		sa->sin_port = htons(atoi(line));
 	} else if (strncmp(line, "TCP6 ", 5) == 0) {
-		struct sockaddr_in6 *sa = (void*)&ws->remote_addr;
+		struct sockaddr_in6 *sa = (void *)&ws->remote_addr;
 
 		ws->our_addr_len = sizeof(struct sockaddr_in6);
 		ws->remote_addr_len = sizeof(struct sockaddr_in6);
@@ -202,7 +212,8 @@ static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
 
 		next = strchr(line, ' ');
 		if (next == NULL) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
 
@@ -210,42 +221,46 @@ static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
 
 		ret = inet_pton(AF_INET6, line, &sa->sin6_addr);
 		if (ret != 1) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
 
-		line = next+1;
+		line = next + 1;
 		next = strchr(line, ' ');
 		if (next == NULL) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
 
 		*next = 0;
 
-		sa = (void*)&ws->our_addr;
+		sa = (void *)&ws->our_addr;
 		sa->sin6_family = AF_INET6;
 
 		ret = inet_pton(AF_INET6, line, &sa->sin6_addr);
 		if (ret != 1) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
 
-		line = next+1;
+		line = next + 1;
 
-		sa = (void*)&ws->remote_addr;
+		sa = (void *)&ws->remote_addr;
 		sa->sin6_port = htons(atoi(line));
 
 		next = strchr(line, ' ');
 		if (next == NULL) {
-			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
 
-		line = next+1;
+		line = next + 1;
 
-		sa = (void*)&ws->our_addr;
+		sa = (void *)&ws->our_addr;
 		sa->sin6_port = htons(atoi(line));
 	} else {
 		oclog(ws, LOG_ERR, "proxy-hdr: unknown protocol: %s", line);
@@ -280,8 +295,7 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 
 	ret = force_read_timeout(fd, &hdr, 16, DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR,
-		      "proxy-hdr: recv timed out");
+		oclog(ws, LOG_ERR, "proxy-hdr: recv timed out");
 		return -1;
 	}
 
@@ -296,19 +310,27 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 		/* recv all */
 		oclog(ws, LOG_DEBUG, "proxy-hdr: detected v1 header");
 		memcpy(hdr.data, &hdr, 16);
-		for (i=0;i<MAX_PROXY_PROTO_V1_SIZE-16;i++) {
-			ret = recv(fd, &hdr.data[16+i], 1, 0);
+		for (i = 0; i < MAX_PROXY_PROTO_V1_SIZE - 16; i++) {
+			ret = recv(fd, &hdr.data[16 + i], 1, 0);
 			if (ret != 1) {
-				oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header");
+				oclog(ws, LOG_ERR,
+				      "proxy-hdr: error parsing v1 header");
 				return -1;
 			}
-			if (hdr.data[16+i] == '\r') {
-				hdr.data[16+i] = 0;
-			} else if (hdr.data[16+i] == '\n') {
-				if (hdr.data[16+i-1] == 0) {
-					return parse_proxy_proto_header_v1(ws, (char*)hdr.data+PROXY_HEADER_V1_SIZE);
+			if (hdr.data[16 + i] == '\r') {
+				hdr.data[16 + i] = 0;
+			} else if (hdr.data[16 + i] == '\n') {
+				if (hdr.data[16 + i - 1] == 0) {
+					return parse_proxy_proto_header_v1(ws,
+									   (char
+									    *)
+									   hdr.
+									   data
+									   +
+									   PROXY_HEADER_V1_SIZE);
 				} else {
-					oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header: no carriage return");
+					oclog(ws, LOG_ERR,
+					      "proxy-hdr: error parsing v1 header: no carriage return");
 					return -1;
 				}
 			}
@@ -329,25 +351,30 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 		return -1;
 	}
 
-	ret = force_read_timeout(fd, hdr.data, data_size, DEFAULT_SOCKET_TIMEOUT);
+	ret =
+	    force_read_timeout(fd, hdr.data, data_size, DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR,
-		      "proxy-hdr: recv data timed out");
+		oclog(ws, LOG_ERR, "proxy-hdr: recv data timed out");
 		return -1;
 	}
 
 	cmd = hdr.ver_cmd & 0x0f;
 	ver = (hdr.ver_cmd & 0xf0) >> 4;
 	if (ver != 0x02) {
-		oclog(ws, LOG_ERR, "proxy-hdr: unsupported version (%x), skipping message", (unsigned)ver);
+		oclog(ws, LOG_ERR,
+		      "proxy-hdr: unsupported version (%x), skipping message",
+		      (unsigned)ver);
 		return 0;
 	}
 
 	if (cmd != 0x01) {
 		if (cmd == 0) {
-			oclog(ws, LOG_DEBUG, "proxy-hdr: received health check command");
+			oclog(ws, LOG_DEBUG,
+			      "proxy-hdr: received health check command");
 		} else {
-			oclog(ws, LOG_ERR, "proxy-hdr: received unsupported command %x", (unsigned)cmd);
+			oclog(ws, LOG_ERR,
+			      "proxy-hdr: received unsupported command %x",
+			      (unsigned)cmd);
 			return -1;
 		}
 	}
@@ -356,45 +383,51 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 	proto = hdr.family & 0x0f;
 
 	if (family != 0x1 && family != 0x2) {
-		oclog(ws, LOG_ERR, "proxy-hdr: received unsupported family %x; skipping header", (unsigned)family);
+		oclog(ws, LOG_ERR,
+		      "proxy-hdr: received unsupported family %x; skipping header",
+		      (unsigned)family);
 		return 0;
 	}
 
 	if ((proto != 0x1 && proto != 0x0)) {
-		oclog(ws, LOG_ERR, "proxy-hdr: received unsupported protocol %x; skipping header", (unsigned)proto);
+		oclog(ws, LOG_ERR,
+		      "proxy-hdr: received unsupported protocol %x; skipping header",
+		      (unsigned)proto);
 		return 0;
 	}
 
 	p = hdr.data;
 
-	if (family == 0x01) { /* AF_INET */
-		struct sockaddr_in *sa = (void*)&ws->remote_addr;
+	if (family == 0x01) {	/* AF_INET */
+		struct sockaddr_in *sa = (void *)&ws->remote_addr;
 
 		if (data_size < 12) {
-			oclog(ws, LOG_INFO, "proxy-hdr: received not enough IPv4 data");
+			oclog(ws, LOG_INFO,
+			      "proxy-hdr: received not enough IPv4 data");
 			return 0;
 		}
 
 		memset(&ws->remote_addr, 0, sizeof(ws->remote_addr));
 		sa->sin_family = AF_INET;
-		memcpy(&sa->sin_port, p+8, 2);
+		memcpy(&sa->sin_port, p + 8, 2);
 		memcpy(&sa->sin_addr, p, 4);
 		ws->remote_addr_len = sizeof(struct sockaddr_in);
 
 		memset(&ws->our_addr, 0, sizeof(ws->our_addr));
-		sa = (void*)&ws->our_addr;
+		sa = (void *)&ws->our_addr;
 		sa->sin_family = AF_INET;
-		memcpy(&sa->sin_addr, p+4, 4);
-		memcpy(&sa->sin_port, p+10, 2);
+		memcpy(&sa->sin_addr, p + 4, 4);
+		memcpy(&sa->sin_port, p + 10, 2);
 		ws->our_addr_len = sizeof(struct sockaddr_in);
 
 		p += 12;
 		data_size -= 12;
-	} else if (family == 0x02) { /* AF_INET6 */
-		struct sockaddr_in6 *sa = (void*)&ws->remote_addr;
+	} else if (family == 0x02) {	/* AF_INET6 */
+		struct sockaddr_in6 *sa = (void *)&ws->remote_addr;
 
 		if (data_size < 36) {
-			oclog(ws, LOG_INFO, "proxy-hdr: did not receive enough IPv6 data");
+			oclog(ws, LOG_INFO,
+			      "proxy-hdr: did not receive enough IPv6 data");
 			return 0;
 		}
 
@@ -402,14 +435,14 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 		sa->sin6_family = AF_INET6;
 		sa->sin6_port = 0;
 		memcpy(&sa->sin6_addr, p, 16);
-		memcpy(&sa->sin6_port, p+32, 2);
+		memcpy(&sa->sin6_port, p + 32, 2);
 		ws->remote_addr_len = sizeof(struct sockaddr_in6);
 
 		memset(&ws->our_addr, 0, sizeof(ws->our_addr));
 		sa->sin6_family = AF_INET6;
-		sa = (void*)&ws->our_addr;
-		memcpy(&sa->sin6_addr, p+16, 16);
-		memcpy(&sa->sin6_port, p+34, 2);
+		sa = (void *)&ws->our_addr;
+		memcpy(&sa->sin6_addr, p + 16, 16);
+		memcpy(&sa->sin6_port, p + 34, 2);
 		ws->our_addr_len = sizeof(struct sockaddr_in);
 
 		p += 36;

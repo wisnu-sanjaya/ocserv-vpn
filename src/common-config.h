@@ -58,6 +58,18 @@ typedef struct pam_cfg_st {
 	int gid_min;
 } pam_cfg_st;
 
+typedef struct saml_cfg_st {
+	char *config;
+	char *spmeta;
+	char *spkey;
+	char *spcert;
+	char *idpmeta;
+	char *idpname;
+	char *idpcert;
+	char *idp_sso_dest_url;
+	char *acs_url;
+} saml_cfg_st;
+
 #define CHECK_TRUE(str) ((str != NULL && (c_strcasecmp(str, "true") == 0 || c_strcasecmp(str, "yes") == 0))?1:0)
 
 struct perm_cfg_st;
@@ -68,6 +80,7 @@ void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const c
 void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
 void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
 void *oidc_get_brackets_string(void * pool, struct perm_cfg_st *config, const char *str);
+void *saml_get_brackets_string(void * pool, struct perm_cfg_st *config, const char *str);
 
 void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, char **_path, char **_realm);
 

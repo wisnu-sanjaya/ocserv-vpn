@@ -5,8 +5,9 @@ AM_CPPFLAGS += -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	$(LIBGNUTLS_CFLAGS) -I$(srcdir)/common -I$(builddir)/common \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
 	$(LIBREADLINE_CFLAGS) $(CODE_COVERAGE_CFLAGS) \
-	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) $(LIBOATH_CFLAGS) \
-	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS) $(RADCLI_CFLAGS) $(SRC_CFLAGS)
+	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) $(LIBOATH_CFLAGS) $(LASSO_CFLAGS) \
+	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS) $(RADCLI_CFLAGS) $(SRC_CFLAGS) \
+	$(GLIB2_CFLAGS) $(APR1_CFLAGS) $(LIBXML2_CFLAGS) $(GOBJECT2_CFLAGS)
 
 if ENABLE_OIDC_AUTH
 AM_CPPFLAGS += $(LIBCURL_CFLAGS) $(CJOSE_CFLAGS) $(JANSSON_CFLAGS)
@@ -27,7 +28,7 @@ noinst_LIBRARIES = libipc.a
 # Authentication module sources
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
 	auth/common.c auth/common.h auth/gssapi.h auth/gssapi.c auth-unix.c \
-	auth-unix.h 
+	auth-unix.h auth/saml.c auth/saml.h
 
 if ENABLE_OIDC_AUTH
 AUTH_SOURCES += auth/openidconnect.c auth/openidconnect.h
@@ -70,14 +71,15 @@ if LOCAL_HTTP_PARSER
 HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
 endif
 
-ocserv_LDADD = ../gl/libgnu.a libccan.a libcommon.a
+ocserv_LDADD = ../gl/libgnu.a libccan.a libcommon.a 
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
 	$(RADCLI_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
 	$(LIBTASN1_LIBS) $(LIBOATH_LIBS) $(LIBNETTLE_LIBS) \
 	$(LIBEV_LIBS) libipc.a $(NEEDED_LIBPROTOBUF_LIBS) \
-	$(CODE_COVERAGE_LDFLAGS) 
+	$(CODE_COVERAGE_LDFLAGS) $(LASSO_LIBS) $(APR1_LIBS) \
+	$(GLIB2_LIBS) $(LIBXML2_LIBS) $(GOBJECT2_LIBS)
 	
 if ENABLE_OIDC_AUTH
 ocserv_LDADD += $(LIBCURL_LIBS) $(CJOSE_LIBS) $(JANSSON_LIBS)

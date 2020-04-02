@@ -36,7 +36,7 @@ void trim_trailing_whitespace(char *str)
 	char *p;
 
 	if (len > 0) {
-		p = str+len-1;
+		p = str + len - 1;
 		while (p >= str && c_isspace(*p)) {
 			*p = 0;
 			p--;
@@ -67,13 +67,12 @@ int str_append_size(str_st * dest, size_t data_size)
 	if (data_size == 0)
 		return 0;
 
-	if (dest->max_length >= tot_len+1) {
+	if (dest->max_length >= tot_len + 1) {
 		size_t unused = MEMSUB(dest->data, dest->allocd);
 
 		if (dest->max_length - unused <= tot_len) {
 			if (dest->length && dest->data)
-				memmove(dest->allocd, dest->data,
-					dest->length);
+				memmove(dest->allocd, dest->data, dest->length);
 
 			dest->data = dest->allocd;
 		}
@@ -85,7 +84,8 @@ int str_append_size(str_st * dest, size_t data_size)
 		    MAX(data_size, MIN_CHUNK) + MAX(dest->max_length,
 						    MIN_CHUNK);
 
-		dest->allocd = talloc_realloc_size(dest->pool, dest->allocd, new_len+1);
+		dest->allocd =
+		    talloc_realloc_size(dest->pool, dest->allocd, new_len + 1);
 		if (dest->allocd == NULL)
 			return ERR_MEM;
 		dest->max_length = new_len;
@@ -103,16 +103,16 @@ int str_append_size(str_st * dest, size_t data_size)
  */
 int str_append_data(str_st * dest, const void *data, size_t data_size)
 {
-    int ret;
+	int ret;
 
-	ret = str_append_size(dest, data_size+1);
+	ret = str_append_size(dest, data_size + 1);
 	if (ret < 0)
 		return ret;
-	
+
 	memcpy(&dest->data[dest->length], data, data_size);
 	dest->length = data_size + dest->length;
 	dest->data[dest->length] = 0;
-	
+
 	return 0;
 }
 
@@ -146,8 +146,7 @@ int str_append_str(str_st * dest, const char *src)
 	return ret;
 }
 
-int
-str_append_printf(str_st *dest, const char *fmt, ...)
+int str_append_printf(str_st * dest, const char *fmt, ...)
 {
 	va_list args;
 	int len;
@@ -167,7 +166,7 @@ str_append_printf(str_st *dest, const char *fmt, ...)
 	return len;
 }
 
-int str_replace_str(str_st *str, const str_rep_tab *tab)
+int str_replace_str(str_st * str, const str_rep_tab * tab)
 {
 	uint8_t *p;
 	const str_rep_tab *ptab;
@@ -184,25 +183,33 @@ int str_replace_str(str_st *str, const str_rep_tab *tab)
 		if (p == NULL)
 			break;
 
-		pos = (ptrdiff_t)(p-str->data);
+		pos = (ptrdiff_t) (p - str->data);
 
 		length = str->length - pos;
 
 		ptab = tab;
 		do {
 			if (length >= ptab->pattern_length &&
-			    memcmp(ptab->pattern, p, ptab->pattern_length) == 0) {
-			    /* replace */
-			    	final_len = length - ptab->pattern_length;
-			    	final = talloc_memdup(str->allocd, p+ptab->pattern_length, final_len);
-			    	if (final == NULL)
+			    memcmp(ptab->pattern, p,
+				   ptab->pattern_length) == 0) {
+				/* replace */
+				final_len = length - ptab->pattern_length;
+				final =
+				    talloc_memdup(str->allocd,
+						  p + ptab->pattern_length,
+						  final_len);
+				if (final == NULL)
 					return -1;
 
 				str->length -= final_len + ptab->pattern_length;
 				if (ptab->rep_val)
-					ret = str_append_str(str, ptab->rep_val);
+					ret =
+					    str_append_str(str, ptab->rep_val);
 				else {
-					char *t = ptab->rep_func(str->pool, ptab->rep_func_input);
+					char *t =
+					    ptab->rep_func(str->pool,
+							   ptab->
+							   rep_func_input);
 					ret = str_append_str(str, t);
 					talloc_free(t);
 				}
@@ -224,11 +231,10 @@ int str_replace_str(str_st *str, const str_rep_tab *tab)
 				/* not found */
 				return -1;
 			}
-		} while(1);
+		} while (1);
 
 		p = &str->data[pos];
-	} while(pos < str->length);
+	} while (pos < str->length);
 
 	return 0;
 }
-
