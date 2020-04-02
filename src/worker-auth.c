@@ -590,7 +590,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg,
 	} else {
 #ifdef HAVE_SAML
 		if (ws->selected_auth->type & AUTH_TYPE_SAML) {
-			pmsg = ws->vhost->perm_config.config->default_domain;
+			pmsg = ws->vhost->perm_config.config->hostname;
 		}
 #endif
 		if (pmsg == NULL)

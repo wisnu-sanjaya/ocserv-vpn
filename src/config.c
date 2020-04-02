@@ -975,6 +975,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name,
 		READ_STRING(config->xml_config_file);
 	} else if (strcmp(name, "default-domain") == 0) {
 		READ_STRING(config->default_domain);
+	} else if (strcmp(name, "hostname") == 0) {
+		READ_STRING(config->hostname);
 	} else if (strcmp(name, "crl") == 0) {
 		READ_STRING(config->crl);
 	} else if (strcmp(name, "cert-user-oid") == 0) {

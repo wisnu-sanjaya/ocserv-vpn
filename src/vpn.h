@@ -244,6 +244,7 @@ struct cfg_st {
 	char *banner;
 	char *ocsp_response; /* file with the OCSP response */
 	char *default_domain; /* domain to be advertised */
+	char *hostname; /* our hostname */
 
 	char **group_list; /* select_group */
 	unsigned int group_list_size;
