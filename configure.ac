@@ -282,12 +282,12 @@ AM_CONDITIONAL(HAVE_CWRAP, test "x$have_cwrap" != xno)
 AM_CONDITIONAL(HAVE_CWRAP_PAM, test "x$have_cwrap_pam" != xno && test "$have_liboath" = yes && test "$pam_enabled" = yes)
 AM_CONDITIONAL(HAVE_CWRAP_ALL, test "x$have_cwrap_nss" != xno && test "x$have_cwrap_pam")
 
-AC_ARG_WITH(saml,
-  AS_HELP_STRING([--without-saml], [do not include SAML support]),
-  test_for_saml=$withval,
-  test_for_saml=yes)
-
-saml_enabled=no
+AC_ARG_ENABLE([saml-auth],
+  [AS_HELP_STRING([--enable-saml-auth],
+                  [whether to support OpenID Connect auth (default is no)])],
+  [test_for_saml=$enableval],
+  [saml_enabled=no]
+)
 
 if test "$test_for_saml" = yes;then
   PKG_CHECK_MODULES([APR1], apr-1)

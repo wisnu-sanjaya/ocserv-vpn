@@ -66,6 +66,9 @@ yajl-tools	   / yajl
 See [README-radius](doc/README-radius.md) for more information on Radius
 dependencies and its configuration.
 
+see [README-saml2](doc/README-saml2.md) for more information on SAML2
+dependencies and its configuration.
+
 # Build instructions
 
 To build from a distributed release use:

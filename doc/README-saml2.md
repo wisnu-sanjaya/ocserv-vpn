@@ -6,6 +6,9 @@ is required. The minimum requirement is version 2.2.0. Further dependencies
 are [apache portable runtime library (apr1)](https://apr.apache.org)
 and [glib2.0](https://developer.gnome.org/glib/).
 
+To build with SAML support, pass the --enable-saml-auth flag to the
+configure script.
+
 ocserv uses a configuration file to setup the SAML2 configuration.
 The important options for ocserv usage are the following:
 ```
