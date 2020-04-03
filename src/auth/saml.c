@@ -30,7 +30,7 @@
 #include "auth/lasso_compat.h"
 #include <libxml/parser.h>
 #include <libxml/tree.h>
-#include <apr-1.0/apr_time.h>
+#include <apr_time.h>
 
 static int cfg_ini_handler(void *_config, const char *section, const char *name,
 			   const char *_value)
