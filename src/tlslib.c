@@ -119,7 +119,8 @@ ssize_t cstp_send(worker_st * ws, const void *data, size_t data_size)
 ssize_t cstp_send_file(worker_st * ws, const char *file)
 {
 	int fd;
-	char buf[512];
+	char buf[1024];
+	int counter = 100; /* allow 10 seconds for a full packet */
 	ssize_t len, total = 0;
 	int ret;
 
@@ -127,8 +128,15 @@ ssize_t cstp_send_file(worker_st * ws, const char *file)
 	if (fd == -1)
 		return GNUTLS_E_FILE_ERROR;
 
-	while ((len = read(fd, buf, sizeof(buf))) > 0 ||
-	       (len == -1 && (errno == EINTR || errno == EAGAIN))) {
+	while (	(len = read( fd, buf, sizeof(buf))) > 0 ||
+		(len == -1 && counter > 0 && (errno == EINTR || errno == EAGAIN))) {
+
+		if (len == -1) {
+			counter--;
+			ms_sleep(100);
+			continue;
+		}
+
 		ret = cstp_send(ws, buf, len);
 		CSTP_FATAL_ERR(ws, ret);
 

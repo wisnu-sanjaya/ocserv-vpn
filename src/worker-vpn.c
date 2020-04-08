@@ -2608,7 +2608,16 @@ static int parse_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 		break;
 	case AC_PKT_DISCONN:
 		oclog(ws, LOG_INFO, "received BYE packet; exiting");
-		exit_worker_reason(ws, REASON_USER_DISCONNECT);
+		/* In openconnect the BYE packet indicates an explicit
+		 * user disconnect. In anyconnect clients it may indicate
+		 * an intention to reconnect (e.g., because network was
+		 * changed). We separate the error codes to ensure we do
+		 * do not interpret the intention incorrectly (see #281). */
+		if (ws->req.user_agent_type == AGENT_ANYCONNECT) {
+			exit_worker_reason(ws, REASON_ANYCONNECT_DISCONNECT);
+		} else {
+			exit_worker_reason(ws, REASON_USER_DISCONNECT);
+		}
 		break;
 	case AC_PKT_COMPRESSED:
 		/* decompress */
