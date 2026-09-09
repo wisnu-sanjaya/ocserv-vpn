@@ -1,0 +1,15 @@
+auth = "saml[config=/config/sso.conf]"
+tcp-port = ${LISTEN_PORT}
+udp-port = ${LISTEN_PORT}
+run-as-user = nobody
+run-as-group = nogroup
+socket-file = /var/run/ocserv-socket
+server-cert = /config/certs/server-cert.pem
+server-key = /config/certs/server-key.pem
+ipv4-network = ${CLIENTNET}
+ipv4-netmask = ${CLIENTNETMASK}
+device = vpns
+cisco-client-compat = true
+dtls-legacy = true
+hostname = ${HOSTNAME}
+cookie-timeout = ${COOKIE_TIMEOUT}
