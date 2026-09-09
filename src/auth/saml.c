@@ -139,7 +139,7 @@ static int saml_auth_init(void **_ctx, void *pool, void *_vctx,
 		exit(1);
 	}
 
-	ctx->request->ForceAuthn = FALSE;
+	ctx->request->ForceAuthn = TRUE;
 	ctx->request->IsPassive = FALSE;
 	ctx->request->NameIDPolicy->AllowCreate = TRUE;
 

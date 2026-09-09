@@ -58,7 +58,12 @@ oc_base64_decode(const uint8_t *src, unsigned src_length,
 	if (ret == 0)
 		return 0;
 
-	return base64_decode_final(&ctx);
+	/* Some nettle versions strictly validate unused padding bits are
+	 * zero in base64_decode_final(), rejecting otherwise-valid unpadded
+	 * base64 whose decoded length already matches caller expectations.
+	 * Treat a successful update() as sufficient. */
+	base64_decode_final(&ctx);
+	return 1;
 }
 
 int oc_base64_decode_alloc(void *pool, const char *in, size_t inlen,

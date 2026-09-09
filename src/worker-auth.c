@@ -1285,7 +1285,7 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 {
 	int ret, size;
-	char str_cookie[BASE64_ENCODE_RAW_LENGTH(sizeof(ws->cookie)) + 1];
+	char str_cookie[2048];
 	size_t str_cookie_size = sizeof(str_cookie);
 	char msg[MAX_BANNER_SIZE + 32];
 	const char *success_msg_head;
@@ -1325,6 +1325,10 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	}
 
 	if (ws->selected_auth->type & AUTH_TYPE_SAML && imsg != NULL) {
+		if (strlen(imsg) >= str_cookie_size) {
+			oclog(ws, LOG_ERR, "SAML session cookie too long (%zu >= %zu), rejecting", strlen(imsg), str_cookie_size);
+			return -1;
+		}
 		strcpy(str_cookie, imsg);
 	} else {
 		oc_base64_encode((char *)ws->cookie, sizeof(ws->cookie),
