@@ -58,7 +58,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxml2 \
     libxmlsec1 libxmlsec1-gnutls \
     libev4 \
-    iproute2 iptables \
+    iproute2 iptables less \
     ca-certificates \
     && ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime \
     && dpkg-reconfigure -f noninteractive tzdata \

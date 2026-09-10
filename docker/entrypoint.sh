@@ -36,6 +36,19 @@ if [ "$TUNNEL_ROUTES" != "default" ]; then
     done
 fi
 
+if [ -n "${DEFAULT_DOMAIN:-}" ]; then
+    echo "default-domain = $DEFAULT_DOMAIN" >> /config/ocserv.conf
+fi
+
+if [ -n "${SPLIT_DNS_DOMAINS:-}" ]; then
+    IFS=',' read -ra SPLITDNS_ARR <<< "$SPLIT_DNS_DOMAINS"
+    for sd in "${SPLITDNS_ARR[@]}"; do
+        sd="${sd#"${sd%%[![:space:]]*}"}"
+        sd="${sd%"${sd##*[![:space:]]}"}"
+        echo "split-dns = $sd" >> /config/ocserv.conf
+    done
+fi
+
 # Enable IP forwarding and set up NAT so VPN client traffic can reach
 # the outside network through this container's egress interface.
 sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1 || true

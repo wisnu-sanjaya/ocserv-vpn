@@ -13,3 +13,5 @@ cisco-client-compat = true
 dtls-legacy = true
 hostname = ${HOSTNAME}
 cookie-timeout = ${COOKIE_TIMEOUT}
+use-occtl = true
+occtl-socket-file = /var/run/occtl.socket
